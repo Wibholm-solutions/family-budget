@@ -1,0 +1,36 @@
+target-version = "py312"
+
+[lint]
+select = [
+    "E", "W", "F",
+    "I",
+    "UP",
+    "SIM",
+    "B",
+    "RUF",
+    "C901",
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+]
+
+ignore = [
+    "E501",
+    "SIM108",
+]
+
+[lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "Depends", "Query", "Path", "Header", "Body", "Form"]
+
+[lint.mccabe]
+max-complexity = 10
+
+[lint.pylint]
+max-args = 5
+max-returns = 4
+max-branches = 8
+max-statements = 30
+
+[format]
+quote-style = "double"

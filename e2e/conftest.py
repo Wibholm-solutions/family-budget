@@ -4,9 +4,9 @@ import subprocess
 import sys
 import tempfile
 import time
-from pathlib import Path
-import urllib.request
 import urllib.error
+import urllib.request
+from pathlib import Path
 
 import pytest
 
@@ -129,7 +129,7 @@ def authenticated_page(page, base_url, request):
             # Should redirect to dashboard after registration
             page.wait_for_url(f"{base_url}/budget/", timeout=30000)
             break
-        except Exception as e:
+        except Exception:
             if attempt == max_retries - 1:
                 raise
             # Wait a bit before retrying

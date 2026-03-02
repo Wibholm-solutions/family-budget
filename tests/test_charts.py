@@ -1,6 +1,5 @@
 """Tests for chart data API endpoint."""
 
-import pytest
 
 
 class TestChartDataEndpoint:

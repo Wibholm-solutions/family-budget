@@ -5,9 +5,8 @@ import json
 import os
 import secrets
 import sqlite3
-from pathlib import Path
-from typing import Optional
 from dataclasses import dataclass
+from pathlib import Path
 
 DB_PATH = Path(os.environ.get("BUDGET_DB_PATH", Path(__file__).parent.parent / "data" / "budget.db"))
 
@@ -21,7 +20,7 @@ DB_PATH = Path(os.environ.get("BUDGET_DB_PATH", Path(__file__).parent.parent / "
 PBKDF2_ITERATIONS = 600_000
 
 
-def hash_password(password: str, salt: Optional[bytes] = None) -> tuple[str, str]:
+def hash_password(password: str, salt: bytes | None = None) -> tuple[str, str]:
     """Hash password with PBKDF2. Returns (hash, salt) as hex strings."""
     if salt is None:
         salt = secrets.token_bytes(32)
@@ -139,7 +138,7 @@ class Income:
     person: str
     amount: float
     frequency: str = 'monthly'  # 'monthly', 'quarterly', 'semi-annual', or 'yearly'
-    months: Optional[list[int]] = None  # Which months this income falls in (1-12)
+    months: list[int] | None = None  # Which months this income falls in (1-12)
 
     @property
     def monthly_amount(self) -> float:
@@ -170,8 +169,8 @@ class Expense:
     category: str
     amount: float
     frequency: str  # 'monthly', 'quarterly', 'semi-annual', or 'yearly'
-    account: Optional[str] = None  # Optional bank account assignment
-    months: Optional[list[int]] = None  # Which months this expense falls in (1-12)
+    account: str | None = None  # Optional bank account assignment
+    months: list[int] | None = None  # Which months this expense falls in (1-12)
 
     @property
     def monthly_amount(self) -> float:
@@ -539,7 +538,7 @@ def get_all_expenses(user_id: int) -> list[Expense]:
     return expenses
 
 
-def get_expense_by_id(expense_id: int, user_id: int) -> Optional[Expense]:
+def get_expense_by_id(expense_id: int, user_id: int) -> Expense | None:
     """Get a specific expense for a user."""
     conn = get_connection()
     cur = conn.cursor()
@@ -655,7 +654,7 @@ def get_all_categories(user_id: int) -> list[Category]:
     return [Category(**dict(row)) for row in rows]
 
 
-def get_category_by_id(category_id: int) -> Optional[Category]:
+def get_category_by_id(category_id: int) -> Category | None:
     """Get a specific category."""
     conn = get_connection()
     cur = conn.cursor()
@@ -846,7 +845,7 @@ def get_all_accounts(user_id: int) -> list[Account]:
     return [Account(**dict(row)) for row in rows]
 
 
-def get_account_by_id(account_id: int, user_id: int) -> Optional[Account]:
+def get_account_by_id(account_id: int, user_id: int) -> Account | None:
     """Get a specific account for a user."""
     conn = get_connection()
     cur = conn.cursor()
@@ -971,7 +970,7 @@ def create_user(
     username: str,
     password: str,
     email: str = None
-) -> Optional[int]:
+) -> int | None:
     """Create a new user. Returns user ID or None if username exists.
 
     If email is provided, only its hash is stored for password reset lookup.
@@ -1012,7 +1011,7 @@ def create_user(
             conn.close()
 
 
-def get_user_by_username(username: str) -> Optional[User]:
+def get_user_by_username(username: str) -> User | None:
     """Get user by username."""
     conn = get_connection()
     cur = conn.cursor()
@@ -1026,7 +1025,7 @@ def get_user_by_username(username: str) -> Optional[User]:
     return User(**dict(row)) if row else None
 
 
-def get_user_by_email(email: str) -> Optional[User]:
+def get_user_by_email(email: str) -> User | None:
     """Get user by email hash (for password reset lookup).
 
     This function finds the user by their email hash. The actual email
@@ -1045,7 +1044,7 @@ def get_user_by_email(email: str) -> Optional[User]:
     return User(**dict(row)) if row else None
 
 
-def get_user_by_id(user_id: int) -> Optional[User]:
+def get_user_by_id(user_id: int) -> User | None:
     """Get user by ID."""
     conn = get_connection()
     cur = conn.cursor()
@@ -1094,7 +1093,7 @@ def update_user_password(user_id: int, password: str):
     conn.close()
 
 
-def authenticate_user(username: str, password: str) -> Optional[User]:
+def authenticate_user(username: str, password: str) -> User | None:
     """Authenticate user. Returns User if successful, None otherwise."""
     user = get_user_by_username(username)
     if user and verify_password(password, user.password_hash, user.salt):
@@ -1145,7 +1144,7 @@ def create_password_reset_token(user_id: int, token_hash: str, expires_at: str) 
     return token_id
 
 
-def get_valid_reset_token(token_hash: str) -> Optional[PasswordResetToken]:
+def get_valid_reset_token(token_hash: str) -> PasswordResetToken | None:
     """Get a valid (unused, not expired) reset token."""
     conn = get_connection()
     cur = conn.cursor()

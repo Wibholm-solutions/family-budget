@@ -40,8 +40,8 @@ def db_module(temp_db):
 @pytest.fixture(scope="function")
 def client(temp_db):
     """Create a test client with fresh database and sessions."""
-    from src import database as db
     from src import api
+    from src import database as db
 
     # Reset database path
     db.DB_PATH = temp_db

@@ -10,22 +10,21 @@ import sqlite3
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from pathlib import Path
 from urllib.parse import urlparse
 
-from dotenv import load_dotenv
 import httpx
-
-from fastapi import FastAPI, Request, Form, HTTPException
+from dotenv import load_dotenv
+from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from . import database as db
 from . import __version__
+from . import database as db
 
 # Initialize database at startup
 db.init_db()

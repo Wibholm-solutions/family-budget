@@ -1,8 +1,6 @@
 """Unit tests for database operations."""
 
-import json
 
-import pytest
 
 
 class TestPasswordHashing:

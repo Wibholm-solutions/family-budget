@@ -10,7 +10,6 @@ Usage:
 """
 
 import sys
-import sqlite3
 from pathlib import Path
 
 # Add src to path
