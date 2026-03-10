@@ -218,8 +218,8 @@ def parse_danish_amount(amount_str: str) -> float:
         amount = float(amount_str)
         # Round to 2 decimals to prevent floating point errors
         return round(amount, 2)
-    except (ValueError, TypeError):
-        raise ValueError(f"Invalid amount format: {amount_str}")
+    except (ValueError, TypeError) as err:
+        raise ValueError(f"Invalid amount format: {amount_str}") from err
 
 
 def format_currency(amount: float) -> str:
@@ -335,7 +335,7 @@ async def register_page(request: Request):
 
 
 @app.post("/budget/register")
-async def register(
+async def register(  # noqa: PLR0911
     request: Request,
     username: str = Form(...),
     password: str = Form(...),
@@ -731,7 +731,7 @@ async def update_income(request: Request):
                 try:
                     amount = parse_danish_amount(amount_str) if amount_str else 0.00
                 except ValueError:
-                    raise HTTPException(status_code=400, detail=f"Ugyldigt beløb format for {name}")
+                    raise HTTPException(status_code=400, detail=f"Ugyldigt beløb format for {name}") from None
                 # Validate frequency
                 if frequency not in ('monthly', 'quarterly', 'semi-annual', 'yearly'):
                     frequency = 'monthly'
@@ -745,7 +745,7 @@ async def update_income(request: Request):
 
     except (ValueError, sqlite3.Error) as e:
         logger.error(f"Error updating income: {e}")
-        raise HTTPException(status_code=500, detail="Der opstod en fejl ved opdatering af indkomst")
+        raise HTTPException(status_code=500, detail="Der opstod en fejl ved opdatering af indkomst") from e
 
     return RedirectResponse(url="/budget/", status_code=303)
 
@@ -820,7 +820,7 @@ def parse_months(months_str: str | None, frequency: str) -> list[int] | None:
     try:
         months = [int(m.strip()) for m in months_str.split(',')]
     except ValueError:
-        raise HTTPException(status_code=400, detail="Ugyldige måneder")
+        raise HTTPException(status_code=400, detail="Ugyldige måneder") from None
 
     if any(m < 1 or m > 12 for m in months):
         raise HTTPException(status_code=400, detail="Måneder skal være mellem 1 og 12")
@@ -833,7 +833,7 @@ def parse_months(months_str: str | None, frequency: str) -> list[int] | None:
 
 
 @app.post("/budget/expenses/add")
-async def add_expense(
+async def add_expense(  # noqa: PLR0913
     request: Request,
     name: str = Form(...),
     category: str = Form(...),
@@ -856,7 +856,7 @@ async def add_expense(
     try:
         amount_float = parse_danish_amount(amount)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Ugyldigt beløb format")
+        raise HTTPException(status_code=400, detail="Ugyldigt beløb format") from None
 
     if amount_float < 0:
         raise HTTPException(status_code=400, detail="Beløb skal være positivt")
@@ -871,7 +871,7 @@ async def add_expense(
         db.add_expense(user_id, name, category, amount_float, frequency, account_value, months=months_list)
     except sqlite3.Error as e:
         logger.error(f"Database error adding expense: {e}")
-        raise HTTPException(status_code=500, detail="Der opstod en fejl ved tilfoejelse af udgiften")
+        raise HTTPException(status_code=500, detail="Der opstod en fejl ved tilfoejelse af udgiften") from e
     return RedirectResponse(url="/budget/expenses", status_code=303)
 
 
@@ -888,12 +888,12 @@ async def delete_expense(request: Request, expense_id: int):
         db.delete_expense(expense_id, user_id)
     except sqlite3.Error as e:
         logger.error(f"Database error deleting expense: {e}")
-        raise HTTPException(status_code=500, detail="Der opstod en fejl ved sletning af udgiften")
+        raise HTTPException(status_code=500, detail="Der opstod en fejl ved sletning af udgiften") from e
     return RedirectResponse(url="/budget/expenses", status_code=303)
 
 
 @app.post("/budget/expenses/{expense_id}/edit")
-async def edit_expense(
+async def edit_expense(  # noqa: PLR0913
     request: Request,
     expense_id: int,
     name: str = Form(...),
@@ -917,7 +917,7 @@ async def edit_expense(
     try:
         amount_float = parse_danish_amount(amount)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Ugyldigt beløb format")
+        raise HTTPException(status_code=400, detail="Ugyldigt beløb format") from None
 
     if amount_float < 0:
         raise HTTPException(status_code=400, detail="Beløb skal være positivt")
@@ -932,7 +932,7 @@ async def edit_expense(
         db.update_expense(expense_id, user_id, name, category, amount_float, frequency, account_value, months=months_list)
     except sqlite3.Error as e:
         logger.error(f"Database error updating expense: {e}")
-        raise HTTPException(status_code=500, detail="Der opstod en fejl ved opdatering af udgiften")
+        raise HTTPException(status_code=500, detail="Der opstod en fejl ved opdatering af udgiften") from e
     return RedirectResponse(url="/budget/expenses", status_code=303)
 
 
@@ -991,7 +991,7 @@ async def add_category(
         raise HTTPException(
             status_code=400,
             detail=f"Kategorien '{name}' findes allerede"
-        )
+        ) from None
     return RedirectResponse(url="/budget/categories", status_code=303)
 
 
@@ -1017,7 +1017,7 @@ async def edit_category(
         raise HTTPException(
             status_code=400,
             detail=f"Kategorien '{name}' findes allerede"
-        )
+        ) from None
     allowed_next = {"/budget/expenses", "/budget/categories"}
     base_url = next if next in allowed_next else "/budget/categories"
     url = base_url
@@ -1049,7 +1049,7 @@ async def delete_category(request: Request, category_id: int):
             )
     except sqlite3.Error as e:
         logger.error(f"Database error deleting category: {e}")
-        raise HTTPException(status_code=500, detail="Der opstod en fejl ved sletning af kategorien")
+        raise HTTPException(status_code=500, detail="Der opstod en fejl ved sletning af kategorien") from e
     return RedirectResponse(url="/budget/categories", status_code=303)
 
 
@@ -1104,12 +1104,12 @@ async def add_account(
         raise HTTPException(
             status_code=400,
             detail=f"Kontoen '{name}' findes allerede"
-        )
+        ) from None
     return RedirectResponse(url="/budget/accounts", status_code=303)
 
 
 @app.post("/budget/accounts/add-json")
-async def add_account_json(request: Request, name: str = Form(...)):
+async def add_account_json(request: Request, name: str = Form(...)):  # noqa: PLR0911
     """Add a new account and return JSON (for inline creation from expense form)."""
     if not check_auth(request):
         return JSONResponse({"success": False, "error": "Ikke logget ind"}, status_code=401)
@@ -1150,7 +1150,7 @@ async def edit_account(
         raise HTTPException(
             status_code=400,
             detail=f"Kontoen '{name}' findes allerede"
-        )
+        ) from None
     url = "/budget/accounts"
     if updated_count > 0:
         url += f"?updated={updated_count}"
@@ -1175,7 +1175,7 @@ async def delete_account(request: Request, account_id: int):
             )
     except sqlite3.Error as e:
         logger.error(f"Database error deleting account: {e}")
-        raise HTTPException(status_code=500, detail="Der opstod en fejl ved sletning af kontoen")
+        raise HTTPException(status_code=500, detail="Der opstod en fejl ved sletning af kontoen") from e
     return RedirectResponse(url="/budget/accounts", status_code=303)
 
 
@@ -1262,7 +1262,7 @@ async def feedback_page(request: Request):
 
 
 @app.post("/budget/feedback")
-async def submit_feedback(
+async def submit_feedback(  # noqa: PLR0911, PLR0912
     request: Request,
     feedback_type: str = Form(...),
     description: str = Form(...),
@@ -1458,7 +1458,7 @@ async def settings_page(request: Request):
 
 
 @app.post("/budget/settings/email")
-async def update_email(
+async def update_email(  # noqa: PLR0911
     request: Request,
     email: str = Form("")
 ):
