@@ -181,6 +181,11 @@ STATIC_DIR = Path(__file__).parent.parent / "static"
 app.mount("/budget/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+@app.get("/budget/health")
+async def health():
+    return {"status": "ok"}
+
+
 # =============================================================================
 # Template helpers
 # =============================================================================

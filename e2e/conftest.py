@@ -26,8 +26,8 @@ def wait_for_server(url: str, timeout: float = 30, interval: float = 0.5) -> boo
     start = time.time()
     while time.time() - start < timeout:
         try:
-            # Try to connect to the login page (always accessible)
-            urllib.request.urlopen(f"{url}/budget/login", timeout=5)
+            # Try to connect to the health endpoint
+            urllib.request.urlopen(f"{url}/budget/health", timeout=5)
             return True
         except (urllib.error.URLError, ConnectionRefusedError, TimeoutError):
             time.sleep(interval)
