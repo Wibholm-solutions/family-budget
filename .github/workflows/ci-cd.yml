@@ -22,8 +22,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
+      - name: Install Playwright browsers
+        run: playwright install --with-deps chromium
+
+      - name: Run unit tests
         run: pytest tests/
+
+      - name: Run E2E tests
+        run: pytest e2e/
+        env:
+          DISPLAY: ":99"
 
   deploy:
     if: github.event_name == 'push'
