@@ -25,3 +25,9 @@ data/sessions.json
 .agent/
 .auto-claude/
 .worktrees/
+.plans/
+.claude/
+.claude_settings.json
+.playwright-mcp/
+scripts/
+docs/plans/
