@@ -4,7 +4,7 @@ This file defines the operational rules for Claude Code within the Family Budget
 
 ## 1. Project Context
 - **SSOT:** Read `docs/AI_CONTEXT.md` for core project facts (Stack, DB, Architecture).
-- **Standards:** Refer to `PATTERNS.md` for coding standards and `docs/DESIGN_GUIDE.md` for UI patterns.
+- **Standards:** Refer to `docs/PATTERNS.md` for coding standards and `docs/DESIGN_GUIDE.md` for UI patterns.
 
 ## 2. CI/CD & Deployment (Operational Facts)
 - **CI Pipeline:** Tests run on all PRs/pushes to master (`.github/workflows/ci.yml`).
