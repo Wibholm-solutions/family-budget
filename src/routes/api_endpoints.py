@@ -14,6 +14,11 @@ from ..helpers import (
 router = APIRouter(prefix="/budget")
 
 
+@router.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 @router.get("/api/stats")
 async def api_stats():
     """Public stats endpoint for uptime dashboard."""
