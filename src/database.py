@@ -249,55 +249,8 @@ def ensure_db_directory():
     DB_PATH.parent.mkdir(exist_ok=True)
 
 
-def init_db():
-    """Initialize database with schema and default data."""
-    ensure_db_directory()
-    conn = get_connection()
-    cur = conn.cursor()
-
-    # Create tables
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS income (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            person TEXT NOT NULL,
-            amount REAL NOT NULL DEFAULT 0,
-            frequency TEXT NOT NULL DEFAULT 'monthly' CHECK(frequency IN ('monthly', 'quarterly', 'semi-annual', 'yearly')),
-            FOREIGN KEY (user_id) REFERENCES users(id),
-            UNIQUE(user_id, person)
-        )
-    """)
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS expenses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            name TEXT NOT NULL,
-            category TEXT NOT NULL,
-            amount REAL NOT NULL,
-            frequency TEXT NOT NULL CHECK(frequency IN ('monthly', 'quarterly', 'semi-annual', 'yearly')),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    """)
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS categories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE,
-            icon TEXT
-        )
-    """)
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS accounts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            name TEXT NOT NULL,
-            UNIQUE(user_id, name)
-        )
-    """)
-
+def _create_tables(cur) -> None:
+    """Create all database tables and indexes if they don't exist."""
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -311,6 +264,56 @@ def init_db():
     """)
 
     cur.execute("""
+        CREATE TABLE IF NOT EXISTS income (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            person TEXT NOT NULL,
+            amount REAL NOT NULL DEFAULT 0,
+            frequency TEXT NOT NULL DEFAULT 'monthly' CHECK(frequency IN ('monthly', 'quarterly', 'semi-annual', 'yearly')),
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE(user_id, person)
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            icon TEXT,
+            UNIQUE(user_id, name)
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_categories_user ON categories(user_id, name)")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            category TEXT NOT NULL,
+            amount REAL NOT NULL,
+            frequency TEXT NOT NULL CHECK(frequency IN ('monthly', 'quarterly', 'semi-annual', 'yearly')),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            category_id INTEGER REFERENCES categories(id),
+            account TEXT,
+            months TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category_id)")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            UNIQUE(user_id, name)
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_accounts_user ON accounts(user_id, name)")
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
@@ -322,69 +325,12 @@ def init_db():
         )
     """)
 
-    # Migration: Add last_login column to existing databases
-    cur.execute("PRAGMA table_info(users)")
-    columns = [col[1] for col in cur.fetchall()]
-    if "last_login" not in columns:
-        cur.execute("ALTER TABLE users ADD COLUMN last_login TIMESTAMP")
-    if "email_hash" not in columns:
-        cur.execute("ALTER TABLE users ADD COLUMN email_hash TEXT")
 
-    # Migration: Remove email_encrypted and email_salt columns (no longer used)
-    # SQLite 3.35.0+ supports DROP COLUMN
-    if "email_encrypted" in columns:
-        try:
-            cur.execute("ALTER TABLE users DROP COLUMN email_encrypted")
-        except sqlite3.OperationalError:
-            pass  # Older SQLite, column will just be ignored
-    if "email_salt" in columns:
-        try:
-            cur.execute("ALTER TABLE users DROP COLUMN email_salt")
-        except sqlite3.OperationalError:
-            pass  # Older SQLite, column will just be ignored
-
-    # Migration: Add frequency column to income table
-    cur.execute("PRAGMA table_info(income)")
-    income_columns = [col[1] for col in cur.fetchall()]
-    if "frequency" not in income_columns:
-        if "amount_monthly" in income_columns:
-            # Old schema: migrate from amount_monthly to amount + frequency
-            cur.execute("ALTER TABLE income ADD COLUMN amount REAL NOT NULL DEFAULT 0")
-            cur.execute("ALTER TABLE income ADD COLUMN frequency TEXT NOT NULL DEFAULT 'monthly'")
-            cur.execute("UPDATE income SET amount = amount_monthly")
-        else:
-            # Schema has amount but no frequency: just add frequency column
-            cur.execute("ALTER TABLE income ADD COLUMN frequency TEXT NOT NULL DEFAULT 'monthly'")
-
-    # Migration: Update expenses CHECK constraint to include quarterly and semi-annual
-    cur.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='expenses'")
-    expenses_schema = cur.fetchone()
-    if expenses_schema and 'quarterly' not in expenses_schema[0]:
-        # Old schema only allows 'monthly' and 'yearly' - need to recreate table
-        cur.execute("""
-            CREATE TABLE expenses_new (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                name TEXT NOT NULL,
-                category TEXT NOT NULL,
-                amount REAL NOT NULL,
-                frequency TEXT NOT NULL CHECK(frequency IN ('monthly', 'quarterly', 'semi-annual', 'yearly')),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            )
-        """)
-        cur.execute("""
-            INSERT INTO expenses_new (id, user_id, name, category, amount, frequency, created_at)
-            SELECT id, user_id, name, category, amount, frequency, created_at FROM expenses
-        """)
-        cur.execute("DROP TABLE expenses")
-        cur.execute("ALTER TABLE expenses_new RENAME TO expenses")
-
-    # Migration: Add user_id to categories table for per-user categories
+def _migrate_categories_add_user_id(cur) -> None:
+    """Add user_id to categories for databases created before per-user categories."""
     cur.execute("PRAGMA table_info(categories)")
     cat_columns = [col[1] for col in cur.fetchall()]
     if "user_id" not in cat_columns:
-        # Need to recreate table to change UNIQUE constraint from name to (user_id, name)
         cur.execute("""
             CREATE TABLE categories_new (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -394,45 +340,51 @@ def init_db():
                 UNIQUE(user_id, name)
             )
         """)
-
-        # Copy existing categories to demo user (user_id = 0)
         cur.execute("""
             INSERT INTO categories_new (id, user_id, name, icon)
             SELECT id, 0, name, icon FROM categories
         """)
-
-        # Drop old table and rename new one
         cur.execute("DROP TABLE categories")
         cur.execute("ALTER TABLE categories_new RENAME TO categories")
-
-        # Create index for lookups
         cur.execute("CREATE INDEX IF NOT EXISTS idx_categories_user ON categories(user_id, name)")
 
-    # Migration: Add category_id to expenses table for FK relationship
+
+def _migrate_expenses_add_columns(cur) -> None:
+    """Add category_id, account, and months columns to expenses for older databases."""
     cur.execute("PRAGMA table_info(expenses)")
     exp_columns = [col[1] for col in cur.fetchall()]
     if "category_id" not in exp_columns:
         cur.execute("ALTER TABLE expenses ADD COLUMN category_id INTEGER REFERENCES categories(id)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category_id)")
-
-    # Migration: Add account column to expenses table
     if "account" not in exp_columns:
         cur.execute("ALTER TABLE expenses ADD COLUMN account TEXT")
-
-    # Migration: Add months column to expenses table
     if "months" not in exp_columns:
         cur.execute("ALTER TABLE expenses ADD COLUMN months TEXT")
 
-    # Create index for account lookups
-    cur.execute("CREATE INDEX IF NOT EXISTS idx_accounts_user ON accounts(user_id, name)")
 
-    # Insert default categories for demo user (user_id = 0)
+def _run_migrations(cur) -> None:
+    """Run schema migrations for existing databases."""
+    _migrate_categories_add_user_id(cur)
+    _migrate_expenses_add_columns(cur)
+
+
+def _seed_default_categories(cur) -> None:
+    """Insert default categories for the demo user (user_id = 0)."""
     for name, icon in DEFAULT_CATEGORIES:
         cur.execute(
             "INSERT OR IGNORE INTO categories (user_id, name, icon) VALUES (?, ?, ?)",
             (0, name, icon)
         )
 
+
+def init_db():
+    """Initialize database with schema and default data."""
+    ensure_db_directory()
+    conn = get_connection()
+    cur = conn.cursor()
+    _create_tables(cur)
+    _run_migrations(cur)
+    _seed_default_categories(cur)
     conn.commit()
     conn.close()
 
@@ -555,7 +507,7 @@ def get_expense_by_id(expense_id: int, user_id: int) -> Expense | None:
     return Expense(**d)
 
 
-def add_expense(user_id: int, name: str, category: str, amount: float, frequency: str, account: str = None, months: list[int] = None) -> int:
+def add_expense(user_id: int, name: str, category: str, amount: float, frequency: str, account: str | None = None, months: list[int] | None = None) -> int:  # noqa: PLR0913
     """Add a new expense for a user. Returns the new expense ID."""
     conn = get_connection()
     cur = conn.cursor()
@@ -571,7 +523,7 @@ def add_expense(user_id: int, name: str, category: str, amount: float, frequency
     return expense_id
 
 
-def update_expense(expense_id: int, user_id: int, name: str, category: str, amount: float, frequency: str, account: str = None, months: list[int] = None):
+def update_expense(expense_id: int, user_id: int, name: str, category: str, amount: float, frequency: str, account: str | None = None, months: list[int] | None = None):  # noqa: PLR0913
     """Update an existing expense for a user."""
     conn = get_connection()
     cur = conn.cursor()
@@ -969,7 +921,7 @@ def get_account_totals(user_id: int) -> dict[str, float]:
 def create_user(
     username: str,
     password: str,
-    email: str = None
+    email: str | None = None
 ) -> int | None:
     """Create a new user. Returns user ID or None if username exists.
 
@@ -1176,7 +1128,7 @@ def mark_reset_token_used(token_id: int):
 # Demo data functions (returns in-memory data, not from database)
 # =============================================================================
 
-def get_yearly_overview(user_id: int) -> dict:
+def get_yearly_overview(user_id: int) -> dict:  # noqa: C901, PLR0912
     """Calculate yearly overview with monthly breakdown.
 
     Returns dict with:
