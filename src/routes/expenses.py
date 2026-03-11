@@ -44,7 +44,7 @@ def parse_months(months_str: str | None, frequency: str) -> list[int] | None:
     try:
         months = [int(m.strip()) for m in months_str.split(',')]
     except ValueError:
-        raise HTTPException(status_code=400, detail="Ugyldige måneder")  # noqa: B904
+        raise HTTPException(status_code=400, detail="Ugyldige måneder") from None
 
     if any(m < 1 or m > 12 for m in months):
         raise HTTPException(status_code=400, detail="Måneder skal være mellem 1 og 12")
@@ -122,7 +122,7 @@ async def add_expense(  # noqa: PLR0913
     try:
         amount_float = parse_danish_amount(amount)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Ugyldigt beløb format")  # noqa: B904
+        raise HTTPException(status_code=400, detail="Ugyldigt beløb format") from None
 
     if amount_float < 0:
         raise HTTPException(status_code=400, detail="Beløb skal være positivt")
@@ -137,7 +137,7 @@ async def add_expense(  # noqa: PLR0913
         db.add_expense(user_id, name, category, amount_float, frequency, account_value, months=months_list)
     except sqlite3.Error as e:
         logger.error(f"Database error adding expense: {e}")
-        raise HTTPException(status_code=500, detail="Der opstod en fejl ved tilfoejelse af udgiften")  # noqa: B904
+        raise HTTPException(status_code=500, detail="Der opstod en fejl ved tilfoejelse af udgiften") from e
     return RedirectResponse(url="/budget/expenses", status_code=303)
 
 
@@ -154,7 +154,7 @@ async def delete_expense(request: Request, expense_id: int):
         db.delete_expense(expense_id, user_id)
     except sqlite3.Error as e:
         logger.error(f"Database error deleting expense: {e}")
-        raise HTTPException(status_code=500, detail="Der opstod en fejl ved sletning af udgiften")  # noqa: B904
+        raise HTTPException(status_code=500, detail="Der opstod en fejl ved sletning af udgiften") from e
     return RedirectResponse(url="/budget/expenses", status_code=303)
 
 
@@ -183,7 +183,7 @@ async def edit_expense(  # noqa: PLR0913
     try:
         amount_float = parse_danish_amount(amount)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Ugyldigt beløb format")  # noqa: B904
+        raise HTTPException(status_code=400, detail="Ugyldigt beløb format") from None
 
     if amount_float < 0:
         raise HTTPException(status_code=400, detail="Beløb skal være positivt")
@@ -198,5 +198,5 @@ async def edit_expense(  # noqa: PLR0913
         db.update_expense(expense_id, user_id, name, category, amount_float, frequency, account_value, months=months_list)
     except sqlite3.Error as e:
         logger.error(f"Database error updating expense: {e}")
-        raise HTTPException(status_code=500, detail="Der opstod en fejl ved opdatering af udgiften")  # noqa: B904
+        raise HTTPException(status_code=500, detail="Der opstod en fejl ved opdatering af udgiften") from e
     return RedirectResponse(url="/budget/expenses", status_code=303)
