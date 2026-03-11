@@ -15,13 +15,12 @@ This file defines the operational rules for Claude Code within the Family Budget
 
 ## 3. Development Workflow
 - **No Direct Commits to Master:** Use branch → PR → merge workflow.
-- **Feature Branches:** 
-  - `feature/last-login`: Tracking user last login.
-  - `feature/email-password-reset`: Email-based reset flow.
 - **Migrations:** Run migrations manually after merging PRs with DB changes.
+- **Adding new routes:** Add a new file in `src/routes/`, register with `app.include_router()` in `src/api.py`. Import helpers from `..helpers`, NOT `..api`.
 
 ## 4. Search Patterns (Quick Reference)
-- Find routes: `grep -n "@app\." src/api.py`
+- Find routes: `grep -rn "@router\." src/routes/`
+- Find helpers/auth: `grep -n "def " src/helpers.py`
 - Find DB functions: `grep -n "def " src/database.py`
 - Find templates: `ls templates/`
 - Find tests: `grep -n "class Test" tests/*.py e2e/*.py`
