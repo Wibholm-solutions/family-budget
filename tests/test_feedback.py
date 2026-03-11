@@ -85,12 +85,12 @@ class TestFeedback:
 
     def test_feedback_rate_limit(self, authenticated_client):
         """Should show rate limit error after too many submissions."""
-        import src.api as api_module
+        import src.routes.pages as pages_module
 
         # Pre-fill rate limit for testclient IP (TestClient default host)
         client_ip = "testclient"
         now = time.time()
-        api_module.feedback_attempts[client_ip] = [now] * api_module.FEEDBACK_RATE_LIMIT
+        pages_module.feedback_attempts[client_ip] = [now] * pages_module.FEEDBACK_RATE_LIMIT
 
         response = authenticated_client.post(
             "/budget/feedback",
@@ -103,15 +103,15 @@ class TestFeedback:
         assert "For mange henvendelser" in response.text
 
         # Cleanup to avoid affecting other tests
-        api_module.feedback_attempts.pop(client_ip, None)
+        pages_module.feedback_attempts.pop(client_ip, None)
 
     def test_feedback_github_api_failure(self, authenticated_client, monkeypatch):
         """GitHub API errors should show a user-friendly error message."""
         import httpx
 
-        import src.api as api_module
+        import src.routes.pages as pages_module
 
-        monkeypatch.setattr(api_module, "GITHUB_TOKEN", "fake-token")
+        monkeypatch.setattr(pages_module, "GITHUB_TOKEN", "fake-token")
 
         async def mock_post(*args, **kwargs):
             raise httpx.ConnectError("Connection failed")
