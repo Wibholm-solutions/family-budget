@@ -25,3 +25,4 @@ data/sessions.json
 .agent/
 .auto-claude/
 .worktrees/
+.worktrees/
