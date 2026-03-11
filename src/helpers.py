@@ -115,7 +115,7 @@ def parse_danish_amount(amount_str: str) -> float:
         # Round to 2 decimals to prevent floating point errors
         return round(amount, 2)
     except (ValueError, TypeError):
-        raise ValueError(f"Invalid amount format: {amount_str}")  # noqa: B904
+        raise ValueError(f"Invalid amount format: {amount_str}") from None
 
 
 def format_currency(amount: float) -> str:
