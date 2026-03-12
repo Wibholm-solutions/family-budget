@@ -64,10 +64,10 @@ async def add_account(
     try:
         db.add_account(user_id, name)
     except sqlite3.IntegrityError:
-        raise HTTPException(  # noqa: B904
+        raise HTTPException(
             status_code=400,
             detail=f"Kontoen '{name}' findes allerede"
-        )
+        ) from None
     return RedirectResponse(url="/budget/accounts", status_code=303)
 
 
@@ -110,10 +110,10 @@ async def edit_account(
     try:
         updated_count = db.update_account(account_id, user_id, name)
     except sqlite3.IntegrityError:
-        raise HTTPException(  # noqa: B904
+        raise HTTPException(
             status_code=400,
             detail=f"Kontoen '{name}' findes allerede"
-        )
+        ) from None
     url = "/budget/accounts"
     if updated_count > 0:
         url += f"?updated={updated_count}"
@@ -138,5 +138,5 @@ async def delete_account(request: Request, account_id: int):
             )
     except sqlite3.Error as e:
         logger.error(f"Database error deleting account: {e}")
-        raise HTTPException(status_code=500, detail="Der opstod en fejl ved sletning af kontoen")  # noqa: B904
+        raise HTTPException(status_code=500, detail="Der opstod en fejl ved sletning af kontoen") from e
     return RedirectResponse(url="/budget/accounts", status_code=303)

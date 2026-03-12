@@ -7,6 +7,12 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .. import database as db
+from ..constants import (
+    DEMO_SESSION_MAX_AGE,
+    MIN_PASSWORD_LENGTH,
+    MIN_USERNAME_LENGTH,
+    SESSION_MAX_AGE,
+)
 from ..helpers import (
     DEMO_SESSION_ID,
     SESSIONS,
@@ -50,7 +56,7 @@ async def login(
             httponly=True,
             secure=True,       # Only send over HTTPS
             samesite="lax",    # CSRF protection
-            max_age=86400 * 30  # 30 days
+            max_age=SESSION_MAX_AGE
         )
         return response
     else:
@@ -77,16 +83,16 @@ async def register(  # noqa: PLR0911
 ):
     """Register a new user."""
     # Validate input
-    if len(username) < 3:
+    if len(username) < MIN_USERNAME_LENGTH:
         return templates.TemplateResponse(
             "register.html",
-            {"request": request, "error": "Brugernavn skal være mindst 3 tegn"}
+            {"request": request, "error": f"Brugernavn skal være mindst {MIN_USERNAME_LENGTH} tegn"}
         )
 
-    if len(password) < 6:
+    if len(password) < MIN_PASSWORD_LENGTH:
         return templates.TemplateResponse(
             "register.html",
-            {"request": request, "error": "Adgangskode skal være mindst 6 tegn"}
+            {"request": request, "error": f"Adgangskode skal være mindst {MIN_PASSWORD_LENGTH} tegn"}
         )
 
     if password != password_confirm:
@@ -115,7 +121,7 @@ async def register(  # noqa: PLR0911
         httponly=True,
         secure=True,
         samesite="lax",
-        max_age=86400 * 30
+        max_age=SESSION_MAX_AGE
     )
     return response
 
@@ -130,7 +136,7 @@ async def demo_mode(request: Request):
         httponly=True,
         secure=True,       # Only send over HTTPS
         samesite="lax",
-        max_age=3600  # Demo expires after 1 hour
+        max_age=DEMO_SESSION_MAX_AGE
     )
     return response
 
@@ -156,7 +162,7 @@ async def demo_toggle(request: Request):
         httponly=True,
         secure=True,
         samesite="lax",
-        max_age=3600,
+        max_age=DEMO_SESSION_MAX_AGE,
     )
     return response
 
