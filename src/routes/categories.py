@@ -3,12 +3,12 @@
 import logging
 import sqlite3
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .. import database as db
+from ..dependencies import require_auth, require_write
 from ..helpers import (
-    check_auth,
     get_user_id,
     is_demo_advanced,
     is_demo_mode,
@@ -21,11 +21,8 @@ router = APIRouter(prefix="/budget")
 
 
 @router.get("/categories", response_class=HTMLResponse)
-async def categories_page(request: Request):
+async def categories_page(request: Request, _: None = Depends(require_auth)):
     """Categories management page."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-
     user_id = get_user_id(request)
     demo = is_demo_mode(request)
 
@@ -55,14 +52,10 @@ async def categories_page(request: Request):
 async def add_category(
     request: Request,
     name: str = Form(...),
-    icon: str = Form(...)
+    icon: str = Form(...),
+    _: None = Depends(require_write("/budget/categories")),
 ):
     """Add a new category."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-    if is_demo_mode(request):
-        return RedirectResponse(url="/budget/categories", status_code=303)
-
     user_id = get_user_id(request)
     try:
         db.add_category(user_id, name, icon)
@@ -81,14 +74,10 @@ async def edit_category(
     category_id: int,
     name: str = Form(...),
     icon: str = Form(...),
-    next: str = Form("")
+    next: str = Form(""),
+    _: None = Depends(require_write("/budget/categories")),
 ):
     """Edit a category."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-    if is_demo_mode(request):
-        return RedirectResponse(url="/budget/categories", status_code=303)
-
     user_id = get_user_id(request)
     try:
         updated_count = db.update_category(category_id, user_id, name, icon)
@@ -107,17 +96,12 @@ async def edit_category(
 
 
 @router.post("/categories/{category_id}/delete")
-async def delete_category(request: Request, category_id: int):
+async def delete_category(request: Request, category_id: int, _: None = Depends(require_write("/budget/categories"))):
     """Delete a category for the current user.
 
     Categories are per-user. Deletion is only allowed for categories owned by
     the current user, and only if the category is not in use.
     """
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-    if is_demo_mode(request):
-        return RedirectResponse(url="/budget/categories", status_code=303)
-
     user_id = get_user_id(request)
     try:
         success = db.delete_category(category_id, user_id)
