@@ -65,7 +65,7 @@ async def update_income(request: Request):
                 try:
                     amount = parse_danish_amount(amount_str) if amount_str else 0.00
                 except ValueError:
-                    raise HTTPException(status_code=400, detail=f"Ugyldigt beløb format for {name}")  # noqa: B904
+                    raise HTTPException(status_code=400, detail=f"Ugyldigt beløb format for {name}") from None
                 # Validate frequency
                 if frequency not in ('monthly', 'quarterly', 'semi-annual', 'yearly'):
                     frequency = 'monthly'
@@ -79,6 +79,6 @@ async def update_income(request: Request):
 
     except (ValueError, sqlite3.Error) as e:
         logger.error(f"Error updating income: {e}")
-        raise HTTPException(status_code=500, detail="Der opstod en fejl ved opdatering af indkomst")  # noqa: B904
+        raise HTTPException(status_code=500, detail="Der opstod en fejl ved opdatering af indkomst") from e
 
     return RedirectResponse(url="/budget/", status_code=303)

@@ -7,11 +7,13 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from .constants import LOGIN_RATE_LIMIT_MAX, LOGIN_RATE_LIMIT_WINDOW
+
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Simple rate limiting for login attempts."""
 
-    def __init__(self, app, max_attempts: int = 5, window_seconds: int = 300):
+    def __init__(self, app, max_attempts: int = LOGIN_RATE_LIMIT_MAX, window_seconds: int = LOGIN_RATE_LIMIT_WINDOW):
         super().__init__(app)
         self.max_attempts = max_attempts
         self.window_seconds = window_seconds
