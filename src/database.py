@@ -1128,19 +1128,16 @@ def mark_reset_token_used(token_id: int):
 # Demo data functions (returns in-memory data, not from database)
 # =============================================================================
 
-def get_yearly_overview(user_id: int) -> dict:  # noqa: C901, PLR0912
-    """Calculate yearly overview with monthly breakdown.
+def _calculate_yearly_overview(expenses: list, income_entries: list) -> dict:
+    """Shared aggregation logic for yearly overview.
 
-    Returns dict with:
-        categories: {category_name: {1: amount, 2: amount, ..., 12: amount}}
-        totals: {1: total, ..., 12: total}
-        income: {1: amount, ..., 12: amount}
-        balance: {1: amount, ..., 12: amount}
-        year_total: float (total expenses for the year)
+    Args:
+        expenses: List of Expense objects with get_monthly_amounts().
+        income_entries: List of Income objects with get_monthly_amounts().
+
+    Returns:
+        dict with keys: categories, totals, income, balance, year_total.
     """
-    expenses = get_all_expenses(user_id)
-    income_entries = get_all_income(user_id)
-
     # Build category breakdown
     categories: dict[str, dict[int, float]] = {}
     for exp in expenses:
@@ -1150,32 +1147,25 @@ def get_yearly_overview(user_id: int) -> dict:  # noqa: C901, PLR0912
         for m in range(1, 13):
             categories[exp.category][m] += monthly[m]
 
-    # Round all values
+    # Round all category values
     for cat in categories:
         for m in range(1, 13):
             categories[cat][m] = round(categories[cat][m], 2)
 
     # Totals per month
-    totals = {m: 0.0 for m in range(1, 13)}
-    for cat_amounts in categories.values():
-        for m in range(1, 13):
-            totals[m] += cat_amounts[m]
-    for m in range(1, 13):
-        totals[m] = round(totals[m], 2)
+    totals = {m: round(sum(cat[m] for cat in categories.values()), 2) for m in range(1, 13)}
 
-    # Income per month (spread equally, no months support)
+    # Income per month (respects months field via get_monthly_amounts)
     income = {m: 0.0 for m in range(1, 13)}
     for inc in income_entries:
-        monthly_amt = inc.monthly_amount
+        monthly_amounts = inc.get_monthly_amounts()
         for m in range(1, 13):
-            income[m] += monthly_amt
+            income[m] += monthly_amounts[m]
     for m in range(1, 13):
         income[m] = round(income[m], 2)
 
-    # Balance
+    # Balance and year total
     balance = {m: round(income[m] - totals[m], 2) for m in range(1, 13)}
-
-    # Year total
     year_total = round(sum(totals.values()), 2)
 
     return {
@@ -1185,6 +1175,22 @@ def get_yearly_overview(user_id: int) -> dict:  # noqa: C901, PLR0912
         'balance': balance,
         'year_total': year_total,
     }
+
+
+def get_yearly_overview(user_id: int) -> dict:
+    """Calculate yearly overview with monthly breakdown.
+
+    Returns dict with:
+        categories: {category_name: {1: amount, 2: amount, ..., 12: amount}}
+        totals: {1: total, ..., 12: total}
+        income: {1: amount, ..., 12: amount}
+        balance: {1: amount, ..., 12: amount}
+        year_total: float (total expenses for the year)
+    """
+    return _calculate_yearly_overview(
+        get_all_expenses(user_id),
+        get_all_income(user_id),
+    )
 
 
 def get_demo_income(advanced: bool = False) -> list[Income]:
@@ -1259,35 +1265,10 @@ def get_demo_accounts(advanced: bool = False) -> list[Account]:
 
 def get_yearly_overview_demo(advanced: bool = False) -> dict:
     """Get yearly overview for demo mode."""
-    demo_expenses = get_demo_expenses(advanced)
-    demo_income = get_demo_income(advanced)
-
-    categories: dict[str, dict[int, float]] = {}
-    for exp in demo_expenses:
-        if exp.category not in categories:
-            categories[exp.category] = {m: 0.0 for m in range(1, 13)}
-        monthly = exp.get_monthly_amounts()
-        for m in range(1, 13):
-            categories[exp.category][m] += monthly[m]
-
-    for cat in categories:
-        for m in range(1, 13):
-            categories[cat][m] = round(categories[cat][m], 2)
-
-    totals = {m: round(sum(cat[m] for cat in categories.values()), 2) for m in range(1, 13)}
-
-    income = {m: 0.0 for m in range(1, 13)}
-    for inc in demo_income:
-        monthly = inc.get_monthly_amounts()
-        for m in range(1, 13):
-            income[m] += monthly[m]
-    for m in range(1, 13):
-        income[m] = round(income[m], 2)
-
-    balance = {m: round(income[m] - totals[m], 2) for m in range(1, 13)}
-    year_total = round(sum(totals.values()), 2)
-
-    return {'categories': categories, 'totals': totals, 'income': income, 'balance': balance, 'year_total': year_total}
+    return _calculate_yearly_overview(
+        get_demo_expenses(advanced),
+        get_demo_income(advanced),
+    )
 
 
 # Initialize database when run directly (for testing/setup)
