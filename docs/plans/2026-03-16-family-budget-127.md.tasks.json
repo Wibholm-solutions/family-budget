@@ -1,0 +1,12 @@
+{
+  "planPath": "docs/plans/2026-03-16-family-budget-127.md",
+  "tasks": [
+    {"id": 1, "subject": "Task 1: Baseline + write behavior tests", "status": "pending"},
+    {"id": 2, "subject": "Task 2: Create src/dependencies.py", "status": "pending", "blockedBy": [1]},
+    {"id": 3, "subject": "Task 3: Register exception handlers in api.py", "status": "pending", "blockedBy": [2]},
+    {"id": 4, "subject": "Task 4: Migrate accounts.py to Depends()", "status": "pending", "blockedBy": [3]},
+    {"id": 5, "subject": "Task 5: Migrate categories.py, expenses.py, income.py", "status": "pending", "blockedBy": [4]},
+    {"id": 6, "subject": "Task 6: Migrate dashboard.py, yearly.py, api_endpoints.py, settings.py, pages.py", "status": "pending", "blockedBy": [5]}
+  ],
+  "lastUpdated": "2026-03-16T00:00:00Z"
+}
