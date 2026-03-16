@@ -1,0 +1,11 @@
+{
+  "planPath": "docs/plans/2026-03-16-family-budget-128.md",
+  "tasks": [
+    {"id": 0, "subject": "Task 1: Write failing tests for _calculate_yearly_overview", "status": "pending"},
+    {"id": 1, "subject": "Task 2: Implement _calculate_yearly_overview helper", "status": "pending", "blockedBy": [0]},
+    {"id": 2, "subject": "Task 3: Replace get_yearly_overview body with helper call", "status": "pending", "blockedBy": [1]},
+    {"id": 3, "subject": "Task 4: Replace get_yearly_overview_demo body with helper call", "status": "pending", "blockedBy": [2]},
+    {"id": 4, "subject": "Task 5: Open PR", "status": "pending", "blockedBy": [3]}
+  ],
+  "lastUpdated": "2026-03-16T00:00:00Z"
+}
