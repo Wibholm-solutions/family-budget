@@ -142,22 +142,7 @@ async def add_expense(  # noqa: PLR0913
     if is_demo_mode(request):
         return RedirectResponse(url="/budget/expenses", status_code=303)
 
-    # Validate frequency
-    if frequency not in VALID_FREQUENCIES:
-        raise HTTPException(status_code=400, detail="Ugyldig frekvens")
-
-    # Parse and validate amount
-    try:
-        amount_float = parse_danish_amount(amount)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Ugyldigt beløb format") from None
-
-    if amount_float < 0:
-        raise HTTPException(status_code=400, detail="Beløb skal være positivt")
-    if amount_float > 1000000:
-        raise HTTPException(status_code=400, detail="Beløb er for stort")
-
-    months_list = parse_months(months if months else None, frequency)
+    amount_float, months_list = validate_expense_input(amount, frequency, months)
 
     user_id = get_user_id(request)
     account_value = account if account else None
@@ -203,22 +188,7 @@ async def edit_expense(  # noqa: PLR0913
     if is_demo_mode(request):
         return RedirectResponse(url="/budget/expenses", status_code=303)
 
-    # Validate frequency
-    if frequency not in VALID_FREQUENCIES:
-        raise HTTPException(status_code=400, detail="Ugyldig frekvens")
-
-    # Parse and validate amount
-    try:
-        amount_float = parse_danish_amount(amount)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Ugyldigt beløb format") from None
-
-    if amount_float < 0:
-        raise HTTPException(status_code=400, detail="Beløb skal være positivt")
-    if amount_float > 1000000:
-        raise HTTPException(status_code=400, detail="Beløb er for stort")
-
-    months_list = parse_months(months if months else None, frequency)
+    amount_float, months_list = validate_expense_input(amount, frequency, months)
 
     user_id = get_user_id(request)
     account_value = account if account else None
