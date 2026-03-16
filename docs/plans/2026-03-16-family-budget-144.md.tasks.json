@@ -1,0 +1,10 @@
+{
+  "planPath": "docs/plans/2026-03-16-family-budget-144.md",
+  "tasks": [
+    {"id": 1, "subject": "Task 1: Verify production DB is fully migrated", "status": "pending"},
+    {"id": 2, "subject": "Task 2: Remove migration helpers from src/database.py", "status": "pending", "blockedBy": [1]},
+    {"id": 3, "subject": "Task 3: Update migration-related tests", "status": "pending", "blockedBy": [2]},
+    {"id": 4, "subject": "Task 4: Run full test suite and open PR", "status": "pending", "blockedBy": [3]}
+  ],
+  "lastUpdated": "2026-03-16T00:00:00Z"
+}
