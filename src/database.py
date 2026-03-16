@@ -326,48 +326,6 @@ def _create_tables(cur) -> None:
     """)
 
 
-def _migrate_categories_add_user_id(cur) -> None:
-    """Add user_id to categories for databases created before per-user categories."""
-    cur.execute("PRAGMA table_info(categories)")
-    cat_columns = [col[1] for col in cur.fetchall()]
-    if "user_id" not in cat_columns:
-        cur.execute("""
-            CREATE TABLE categories_new (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                name TEXT NOT NULL,
-                icon TEXT,
-                UNIQUE(user_id, name)
-            )
-        """)
-        cur.execute("""
-            INSERT INTO categories_new (id, user_id, name, icon)
-            SELECT id, 0, name, icon FROM categories
-        """)
-        cur.execute("DROP TABLE categories")
-        cur.execute("ALTER TABLE categories_new RENAME TO categories")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_categories_user ON categories(user_id, name)")
-
-
-def _migrate_expenses_add_columns(cur) -> None:
-    """Add category_id, account, and months columns to expenses for older databases."""
-    cur.execute("PRAGMA table_info(expenses)")
-    exp_columns = [col[1] for col in cur.fetchall()]
-    if "category_id" not in exp_columns:
-        cur.execute("ALTER TABLE expenses ADD COLUMN category_id INTEGER REFERENCES categories(id)")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category_id)")
-    if "account" not in exp_columns:
-        cur.execute("ALTER TABLE expenses ADD COLUMN account TEXT")
-    if "months" not in exp_columns:
-        cur.execute("ALTER TABLE expenses ADD COLUMN months TEXT")
-
-
-def _run_migrations(cur) -> None:
-    """Run schema migrations for existing databases."""
-    _migrate_categories_add_user_id(cur)
-    _migrate_expenses_add_columns(cur)
-
-
 def _seed_default_categories(cur) -> None:
     """Insert default categories for the demo user (user_id = 0)."""
     for name, icon in DEFAULT_CATEGORIES:
@@ -383,7 +341,6 @@ def init_db():
     conn = get_connection()
     cur = conn.cursor()
     _create_tables(cur)
-    _run_migrations(cur)
     _seed_default_categories(cur)
     conn.commit()
     conn.close()
