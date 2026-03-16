@@ -1,13 +1,12 @@
 """Settings routes for Family Budget."""
 
-from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, Form, Request
+from fastapi.responses import HTMLResponse
 
 from .. import database as db
+from ..dependencies import require_write
 from ..helpers import (
-    check_auth,
     get_user_id,
-    is_demo_mode,
     templates,
 )
 
@@ -15,13 +14,8 @@ router = APIRouter(prefix="/budget")
 
 
 @router.get("/settings", response_class=HTMLResponse)
-async def settings_page(request: Request):
+async def settings_page(request: Request, _: None = Depends(require_write("/budget/"))):
     """Account settings page."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-    if is_demo_mode(request):
-        return RedirectResponse(url="/budget/", status_code=303)
-
     user_id = get_user_id(request)
     user = db.get_user_by_id(user_id)
 
@@ -38,18 +32,14 @@ async def settings_page(request: Request):
 @router.post("/settings/email")
 async def update_email(  # noqa: PLR0911
     request: Request,
-    email: str = Form("")
+    email: str = Form(""),
+    _: None = Depends(require_write("/budget/")),
 ):
     """Update user email hash.
 
     Only the email hash is stored for password reset verification.
     The actual email is never stored.
     """
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-    if is_demo_mode(request):
-        return RedirectResponse(url="/budget/", status_code=303)
-
     user_id = get_user_id(request)
     user = db.get_user_by_id(user_id)
     email = email.strip() if email else None

@@ -6,9 +6,10 @@ import time
 from collections import defaultdict
 
 import httpx
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from ..dependencies import require_auth
 from ..helpers import (
     DONATION_LINKS,
     check_auth,
@@ -93,11 +94,8 @@ def record_feedback_attempt(client_ip: str):
 
 
 @router.get("/feedback", response_class=HTMLResponse)
-async def feedback_page(request: Request):
+async def feedback_page(request: Request, _: None = Depends(require_auth)):
     """Feedback submission page."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-
     return templates.TemplateResponse(
         "feedback.html",
         {"request": request, "demo_mode": is_demo_mode(request), "demo_advanced": is_demo_advanced(request)}
@@ -110,12 +108,10 @@ async def submit_feedback(  # noqa: PLR0911, PLR0912
     feedback_type: str = Form(...),
     description: str = Form(...),
     email: str = Form(""),
-    website: str = Form("")  # Honeypot field
+    website: str = Form(""),  # Honeypot field
+    _: None = Depends(require_auth),
 ):
     """Submit feedback - creates a GitHub issue."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-
     demo = is_demo_mode(request)
     client_ip = request.client.host if request.client else "unknown"
 
