@@ -43,6 +43,22 @@ app.state.version = __version__
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware, max_attempts=5, window_seconds=300)
 
+# Auth/demo exception handlers
+from fastapi import Request as _Request  # noqa: E402
+from fastapi.responses import RedirectResponse as _RedirectResponse  # noqa: E402
+from .dependencies import AuthRequired, DemoBlocked  # noqa: E402
+
+
+@app.exception_handler(AuthRequired)
+async def _auth_required_handler(_request: _Request, _exc: AuthRequired) -> _RedirectResponse:
+    return _RedirectResponse(url="/budget/login", status_code=303)
+
+
+@app.exception_handler(DemoBlocked)
+async def _demo_blocked_handler(_request: _Request, exc: DemoBlocked) -> _RedirectResponse:
+    return _RedirectResponse(url=exc.redirect_to, status_code=303)
+
+
 # Serve static files
 STATIC_DIR = Path(__file__).parent.parent / "static"
 app.mount("/budget/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

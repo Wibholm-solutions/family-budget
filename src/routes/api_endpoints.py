@@ -1,11 +1,10 @@
 """Public API endpoints for Family Budget."""
 
-from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Depends, Request
 
 from .. import database as db
+from ..dependencies import require_auth
 from ..helpers import (
-    check_auth,
     get_user_id,
     is_demo_advanced,
     is_demo_mode,
@@ -27,15 +26,12 @@ async def api_stats():
 
 
 @router.get("/api/chart-data")
-async def chart_data(request: Request):
+async def chart_data(request: Request, _: None = Depends(require_auth)):
     """API endpoint for chart visualizations.
 
     Returns JSON with category_totals, total_income, total_expenses, top_expenses.
     All amounts are monthly equivalents.
     """
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-
     demo = is_demo_mode(request)
     advanced = is_demo_advanced(request)
     user_id = get_user_id(request)

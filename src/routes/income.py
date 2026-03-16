@@ -3,12 +3,12 @@
 import logging
 import sqlite3
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .. import database as db
+from ..dependencies import require_auth, require_write
 from ..helpers import (
-    check_auth,
     get_user_id,
     is_demo_advanced,
     is_demo_mode,
@@ -22,11 +22,8 @@ router = APIRouter(prefix="/budget")
 
 
 @router.get("/income", response_class=HTMLResponse)
-async def income_page(request: Request):
+async def income_page(request: Request, _: None = Depends(require_auth)):
     """Income edit page."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-
     demo = is_demo_mode(request)
     advanced = is_demo_advanced(request)
     user_id = get_user_id(request)
@@ -43,13 +40,8 @@ async def income_page(request: Request):
 
 
 @router.post("/income")
-async def update_income(request: Request):
+async def update_income(request: Request, _: None = Depends(require_write("/budget/"))):
     """Update income values - handles dynamic number of income sources."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-    if is_demo_mode(request):
-        return RedirectResponse(url="/budget/", status_code=303)
-
     user_id = get_user_id(request)
     form = await request.form()
 

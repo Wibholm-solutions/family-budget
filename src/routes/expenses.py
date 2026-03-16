@@ -3,12 +3,12 @@
 import logging
 import sqlite3
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .. import database as db
+from ..dependencies import require_auth, require_write
 from ..helpers import (
-    check_auth,
     get_user_id,
     is_demo_advanced,
     is_demo_mode,
@@ -57,11 +57,8 @@ def parse_months(months_str: str | None, frequency: str) -> list[int] | None:
 
 
 @router.get("/expenses", response_class=HTMLResponse)
-async def expenses_page(request: Request):
+async def expenses_page(request: Request, _: None = Depends(require_auth)):
     """Expenses management page."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-
     user_id = get_user_id(request)
     demo = is_demo_mode(request)
     advanced = is_demo_advanced(request)
@@ -107,13 +104,9 @@ async def add_expense(  # noqa: PLR0913
     frequency: str = Form(...),
     account: str = Form(""),
     months: str = Form(""),
+    _: None = Depends(require_write("/budget/expenses")),
 ):
     """Add a new expense."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-    if is_demo_mode(request):
-        return RedirectResponse(url="/budget/expenses", status_code=303)
-
     # Validate frequency
     if frequency not in VALID_FREQUENCIES:
         raise HTTPException(status_code=400, detail="Ugyldig frekvens")
@@ -142,13 +135,8 @@ async def add_expense(  # noqa: PLR0913
 
 
 @router.post("/expenses/{expense_id}/delete")
-async def delete_expense(request: Request, expense_id: int):
+async def delete_expense(request: Request, expense_id: int, _: None = Depends(require_write("/budget/expenses"))):
     """Delete an expense."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-    if is_demo_mode(request):
-        return RedirectResponse(url="/budget/expenses", status_code=303)
-
     user_id = get_user_id(request)
     try:
         db.delete_expense(expense_id, user_id)
@@ -168,13 +156,9 @@ async def edit_expense(  # noqa: PLR0913
     frequency: str = Form(...),
     account: str = Form(""),
     months: str = Form(""),
+    _: None = Depends(require_write("/budget/expenses")),
 ):
     """Edit an expense."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-    if is_demo_mode(request):
-        return RedirectResponse(url="/budget/expenses", status_code=303)
-
     # Validate frequency
     if frequency not in VALID_FREQUENCIES:
         raise HTTPException(status_code=400, detail="Ugyldig frekvens")

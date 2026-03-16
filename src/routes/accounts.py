@@ -3,10 +3,11 @@
 import logging
 import sqlite3
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from .. import database as db
+from ..dependencies import require_auth, require_write
 from ..helpers import (
     check_auth,
     get_user_id,
@@ -21,11 +22,8 @@ router = APIRouter(prefix="/budget")
 
 
 @router.get("/accounts", response_class=HTMLResponse)
-async def accounts_page(request: Request):
+async def accounts_page(request: Request, _: None = Depends(require_auth)):
     """Accounts management page."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-
     user_id = get_user_id(request)
     demo = is_demo_mode(request)
 
@@ -52,14 +50,10 @@ async def accounts_page(request: Request):
 @router.post("/accounts/add")
 async def add_account(
     request: Request,
-    name: str = Form(...)
+    name: str = Form(...),
+    _: None = Depends(require_write("/budget/accounts")),
 ):
     """Add a new account."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-    if is_demo_mode(request):
-        return RedirectResponse(url="/budget/accounts", status_code=303)
-
     user_id = get_user_id(request)
     try:
         db.add_account(user_id, name)
@@ -98,14 +92,10 @@ async def add_account_json(request: Request, name: str = Form(...)):  # noqa: PL
 async def edit_account(
     request: Request,
     account_id: int,
-    name: str = Form(...)
+    name: str = Form(...),
+    _: None = Depends(require_write("/budget/accounts")),
 ):
     """Edit an account."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-    if is_demo_mode(request):
-        return RedirectResponse(url="/budget/accounts", status_code=303)
-
     user_id = get_user_id(request)
     try:
         updated_count = db.update_account(account_id, user_id, name)
@@ -121,13 +111,8 @@ async def edit_account(
 
 
 @router.post("/accounts/{account_id}/delete")
-async def delete_account(request: Request, account_id: int):
+async def delete_account(request: Request, account_id: int, _: None = Depends(require_write("/budget/accounts"))):
     """Delete an account for the current user."""
-    if not check_auth(request):
-        return RedirectResponse(url="/budget/login", status_code=303)
-    if is_demo_mode(request):
-        return RedirectResponse(url="/budget/accounts", status_code=303)
-
     user_id = get_user_id(request)
     try:
         success = db.delete_account(account_id, user_id)
