@@ -5,6 +5,7 @@ import json
 import os
 import secrets
 import sqlite3
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -237,11 +238,15 @@ class PasswordResetToken:
     used: bool = False
 
 
-def get_connection() -> sqlite3.Connection:
-    """Get database connection."""
+@contextmanager
+def get_connection():
+    """Get database connection as a context manager. Always closes on exit."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def ensure_db_directory():
