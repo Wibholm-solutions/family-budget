@@ -72,11 +72,10 @@ class TestExpensesWithDecimals:
         )
         # Get the expense ID from the database
         from src.database import get_connection
-        conn = get_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT id FROM expenses ORDER BY id DESC LIMIT 1")
-        expense_id = cur.fetchone()[0]
-        conn.close()
+        with get_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM expenses ORDER BY id DESC LIMIT 1")
+            expense_id = cur.fetchone()[0]
 
         # Now edit it
         response = authenticated_client.post(

@@ -1011,11 +1011,10 @@ class TestExpenseSchemaColumns:
     """Tests that expense schema has all required columns."""
 
     def test_months_column_exists_after_init(self, db_module):
-        conn = db_module.get_connection()
-        cur = conn.cursor()
-        cur.execute("PRAGMA table_info(expenses)")
-        columns = [col[1] for col in cur.fetchall()]
-        conn.close()
+        with db_module.get_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("PRAGMA table_info(expenses)")
+            columns = [col[1] for col in cur.fetchall()]
         assert "months" in columns
 
     def test_existing_expenses_have_null_months(self, db_module):
