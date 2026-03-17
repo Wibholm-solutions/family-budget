@@ -229,9 +229,10 @@
                     </div>
                     <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Udgiftsfordeling</h3>
                 </div>
-                <div class="h-64">
+                <div class="h-52">
                     <canvas id="chart-categories"></canvas>
                 </div>
+                <div id="chart-legend" class="mt-3 space-y-0.5 max-h-32 overflow-y-auto"></div>
             </div>
         </div>
         </div>
@@ -543,17 +544,49 @@
     // === Chart Visualization ===
     let categoryChart = null;
 
-    // Color palette for charts (matches TailwindCSS colors)
+    // Extended harmonious color palette (12 colors, Tailwind-aligned)
     const chartColors = [
         '#3b82f6', // blue-500
         '#10b981', // emerald-500
         '#f59e0b', // amber-500
-        '#ef4444', // red-500
         '#8b5cf6', // violet-500
-        '#ec4899', // pink-500
         '#06b6d4', // cyan-500
+        '#ec4899', // pink-500
         '#84cc16', // lime-500
+        '#f97316', // orange-500
+        '#14b8a6', // teal-500
+        '#a855f7', // purple-500
+        '#ef4444', // red-500
+        '#64748b', // slate-500
     ];
+
+    // Custom center text plugin: draws "Total" label + formatted total inside the doughnut hole
+    const centerTextPlugin = {
+        id: 'centerText',
+        afterDraw(chart) {
+            if (chart.config.type !== 'doughnut') return;
+            const { ctx, chartArea } = chart;
+            if (!chartArea) return;
+            const centerX = (chartArea.left + chartArea.right) / 2;
+            const centerY = (chartArea.top + chartArea.bottom) / 2;
+            const isDark = document.documentElement.classList.contains('dark');
+
+            ctx.save();
+
+            ctx.font = '11px system-ui, sans-serif';
+            ctx.fillStyle = isDark ? '#9ca3af' : '#6b7280';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Total', centerX, centerY - 12);
+
+            const total = chart.config.data.datasets[0].data.reduce((a, b) => a + b, 0);
+            ctx.font = 'bold 14px system-ui, sans-serif';
+            ctx.fillStyle = isDark ? '#f9fafb' : '#111827';
+            ctx.fillText(formatCurrency(total), centerX, centerY + 8);
+
+            ctx.restore();
+        }
+    };
 
     async function initCharts() {
         try {
@@ -575,36 +608,62 @@
         const values = Object.values(categoryTotals);
         const total = values.reduce((a, b) => a + b, 0);
 
-        // Skip if no data
+        // Empty state: design-guide pattern (icon + text)
         if (total === 0) {
-            ctx.parentElement.innerHTML = '<p class="text-gray-400 text-center py-8">Ingen data</p>';
+            const container = ctx.parentElement;
+            container.replaceChildren(); // clear canvas
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'flex flex-col items-center justify-center h-full py-6 text-center';
+
+            const iconBox = document.createElement('div');
+            iconBox.className = 'w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-3';
+            const icon = document.createElement('i');
+            icon.setAttribute('data-lucide', 'pie-chart');
+            icon.className = 'w-6 h-6 text-gray-400';
+            iconBox.appendChild(icon);
+
+            const title = document.createElement('p');
+            title.className = 'text-sm font-medium text-gray-500 dark:text-gray-400';
+            title.textContent = 'Ingen udgifter endnu';
+
+            const sub = document.createElement('p');
+            sub.className = 'text-xs text-gray-400 dark:text-gray-500 mt-1';
+            sub.textContent = 'Tilføj udgifter for at se fordelingen';
+
+            wrapper.appendChild(iconBox);
+            wrapper.appendChild(title);
+            wrapper.appendChild(sub);
+            container.appendChild(wrapper);
+            lucide.createIcons();
             return;
         }
 
         if (categoryChart) categoryChart.destroy();
 
+        const isDark = document.documentElement.classList.contains('dark');
+
         categoryChart = new Chart(ctx, {
-            type: 'pie',
+            type: 'doughnut',
+            plugins: [centerTextPlugin],
             data: {
                 labels: labels,
                 datasets: [{
                     data: values,
                     backgroundColor: chartColors.slice(0, labels.length),
-                    borderWidth: 0
+                    borderWidth: 2,
+                    borderColor: isDark ? '#1f2937' : '#ffffff',
+                    hoverOffset: 12,
+                    hoverBorderWidth: 2,
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                cutout: '65%',
+                animation: { animateRotate: true, animateScale: false },
                 plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#4b5563',
-                            padding: 12,
-                            usePointStyle: true
-                        }
-                    },
+                    legend: { display: false },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
@@ -616,6 +675,57 @@
                     }
                 }
             }
+        });
+
+        renderChartLegend(labels, values, total);
+    }
+
+    // Builds legend rows using safe DOM methods (avoids XSS from category names)
+    function renderChartLegend(labels, values, total) {
+        const legend = document.getElementById('chart-legend');
+        if (!legend) return;
+
+        legend.replaceChildren(); // clear previous
+
+        labels.forEach((label, i) => {
+            const value = values[i];
+            const pct = ((value / total) * 100).toFixed(1);
+            const color = chartColors[i % chartColors.length];
+
+            const row = document.createElement('div');
+            row.className = 'flex items-center justify-between gap-2 py-1';
+
+            const left = document.createElement('div');
+            left.className = 'flex items-center gap-2 min-w-0';
+
+            const swatch = document.createElement('span');
+            swatch.className = 'w-2.5 h-2.5 rounded-full flex-shrink-0';
+            swatch.style.backgroundColor = color;
+
+            const name = document.createElement('span');
+            name.className = 'text-xs text-gray-600 dark:text-gray-400 truncate';
+            name.textContent = label; // textContent — safe, no XSS
+
+            left.appendChild(swatch);
+            left.appendChild(name);
+
+            const right = document.createElement('div');
+            right.className = 'flex items-center gap-2 flex-shrink-0 text-xs tabular-nums';
+
+            const pctSpan = document.createElement('span');
+            pctSpan.className = 'text-gray-500 dark:text-gray-500';
+            pctSpan.textContent = pct + '%';
+
+            const amtSpan = document.createElement('span');
+            amtSpan.className = 'font-medium text-gray-900 dark:text-white';
+            amtSpan.textContent = formatCurrency(value);
+
+            right.appendChild(pctSpan);
+            right.appendChild(amtSpan);
+
+            row.appendChild(left);
+            row.appendChild(right);
+            legend.appendChild(row);
         });
     }
 </script>
