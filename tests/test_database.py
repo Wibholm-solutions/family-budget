@@ -1007,8 +1007,8 @@ class TestExpenseMonthlyAmounts:
         assert all(result[m] == 0 for m in [2, 3, 5, 6, 8, 9, 11, 12])
 
 
-class TestMonthsMigration:
-    """Tests for months column migration."""
+class TestExpenseSchemaColumns:
+    """Tests that expense schema has all required columns."""
 
     def test_months_column_exists_after_init(self, db_module):
         conn = db_module.get_connection()
