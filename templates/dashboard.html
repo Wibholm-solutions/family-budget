@@ -614,6 +614,7 @@
             container.replaceChildren(); // clear canvas
 
             const wrapper = document.createElement('div');
+            wrapper.id = 'chart-empty-state';
             wrapper.className = 'flex flex-col items-center justify-center h-full py-6 text-center';
 
             const iconBox = document.createElement('div');

@@ -7,11 +7,11 @@ class TestChartRendering:
     """Tests for chart rendering on dashboard."""
 
     def test_chart_section_renders_for_new_user(self, authenticated_page: Page, base_url: str):
-        """Chart section should render even for new users without data."""
+        """Chart section should render empty state placeholder for users without data."""
         authenticated_page.goto(f"{base_url}/budget/")
 
-        # Empty user shows "Ingen data" for category chart
-        expect(authenticated_page.locator("text=Ingen data")).to_be_visible()
+        # Empty state shows icon + descriptive text (scoped to chart empty state)
+        expect(authenticated_page.locator("#chart-empty-state")).to_be_visible()
 
     def test_chart_label_visible(self, authenticated_page: Page, base_url: str):
         """Chart label should be visible."""
