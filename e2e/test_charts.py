@@ -74,6 +74,25 @@ class TestDemoCharts:
         assert box["width"] > 0
         assert box["height"] > 0
 
+    def test_demo_chart_has_custom_legend(self, page: Page, base_url: str):
+        """Doughnut chart should have a custom legend div below the canvas."""
+        page.goto(f"{base_url}/budget/demo")
+        page.wait_for_url(f"{base_url}/budget/")
+        page.wait_for_timeout(1000)
+
+        legend = page.locator("#chart-legend")
+        expect(legend).to_be_visible()
+
+    def test_demo_chart_legend_has_percentage(self, page: Page, base_url: str):
+        """Custom legend should show percentage values."""
+        page.goto(f"{base_url}/budget/demo")
+        page.wait_for_url(f"{base_url}/budget/")
+        page.wait_for_timeout(1500)
+
+        legend_text = page.locator("#chart-legend").text_content()
+        assert legend_text is not None
+        assert "%" in legend_text
+
 
 class TestChartPosition:
     """Tests for chart position on dashboard."""
