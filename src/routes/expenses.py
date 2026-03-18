@@ -56,6 +56,34 @@ def parse_months(months_str: str | None, frequency: str) -> list[int] | None:
     return sorted(months)
 
 
+def validate_expense_input(
+    amount_str: str,
+    frequency: str,
+    months_str: str | None,
+) -> tuple[float, list[int] | None]:
+    """Validate and parse shared expense input fields.
+
+    Raises HTTPException(400) on any validation failure.
+    Returns (amount_float, months_list).
+    """
+    if frequency not in VALID_FREQUENCIES:
+        raise HTTPException(status_code=400, detail="Ugyldig frekvens")
+
+    try:
+        amount_float = parse_danish_amount(amount_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Ugyldigt beløb format") from None
+
+    if amount_float < 0:
+        raise HTTPException(status_code=400, detail="Beløb skal være positivt")
+    if amount_float > 1000000:
+        raise HTTPException(status_code=400, detail="Beløb er for stort")
+
+    months_list = parse_months(months_str if months_str else None, frequency)
+
+    return amount_float, months_list
+
+
 @router.get("/expenses", response_class=HTMLResponse)
 async def expenses_page(request: Request, _: None = Depends(require_auth)):
     """Expenses management page."""
