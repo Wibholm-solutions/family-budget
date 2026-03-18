@@ -1,0 +1,9 @@
+{
+  "planPath": "docs/plans/2026-03-17-family-budget-132.md",
+  "tasks": [
+    {"id": 1, "subject": "Task 1: Create fresh branch and write failing unit tests", "status": "pending"},
+    {"id": 2, "subject": "Task 2: Implement validate_expense_input helper", "status": "pending", "blockedBy": [1]},
+    {"id": 3, "subject": "Task 3: Refactor route handlers and open PR", "status": "pending", "blockedBy": [2]}
+  ],
+  "lastUpdated": "2026-03-17T00:00:00Z"
+}
