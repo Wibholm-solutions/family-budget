@@ -7,11 +7,11 @@ class TestChartRendering:
     """Tests for chart rendering on dashboard."""
 
     def test_chart_section_renders_for_new_user(self, authenticated_page: Page, base_url: str):
-        """Chart section should render even for new users without data."""
+        """Chart section should render empty state placeholder for users without data."""
         authenticated_page.goto(f"{base_url}/budget/")
 
-        # Empty user shows "Ingen data" for category chart
-        expect(authenticated_page.locator("text=Ingen data")).to_be_visible()
+        # Empty state shows icon + descriptive text (scoped to chart empty state)
+        expect(authenticated_page.locator("#chart-empty-state")).to_be_visible()
 
     def test_chart_label_visible(self, authenticated_page: Page, base_url: str):
         """Chart label should be visible."""
@@ -73,6 +73,25 @@ class TestDemoCharts:
         assert box is not None
         assert box["width"] > 0
         assert box["height"] > 0
+
+    def test_demo_chart_has_custom_legend(self, page: Page, base_url: str):
+        """Doughnut chart should have a custom legend div below the canvas."""
+        page.goto(f"{base_url}/budget/demo")
+        page.wait_for_url(f"{base_url}/budget/")
+        page.wait_for_timeout(1000)
+
+        legend = page.locator("#chart-legend")
+        expect(legend).to_be_visible()
+
+    def test_demo_chart_legend_has_percentage(self, page: Page, base_url: str):
+        """Custom legend should show percentage values."""
+        page.goto(f"{base_url}/budget/demo")
+        page.wait_for_url(f"{base_url}/budget/")
+        page.wait_for_timeout(1500)
+
+        legend_text = page.locator("#chart-legend").text_content()
+        assert legend_text is not None
+        assert "%" in legend_text
 
 
 class TestChartPosition:
