@@ -1,6 +1,7 @@
 """Public API endpoints for Family Budget."""
 
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import JSONResponse
 
 from .. import database as db
 from ..dependencies import require_auth
@@ -15,7 +16,16 @@ router = APIRouter(prefix="/budget")
 
 @router.get("/health")
 async def health():
-    return {"status": "ok"}
+    """Lightweight health check with DB connectivity verification."""
+    try:
+        with db.get_connection() as conn:
+            conn.execute("SELECT 1")
+        return {"status": "ok", "database": "ok"}
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "degraded", "database": "error", "detail": str(e)},
+        )
 
 
 @router.get("/api/stats")
