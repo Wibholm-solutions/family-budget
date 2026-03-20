@@ -12,8 +12,9 @@ services:
       - TZ=Europe/Copenhagen
       - PYTHONUNBUFFERED=1
       - APP_VERSION=${APP_VERSION}
-      - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - GITHUB_REPO=saabendtsen/family-budget
+      # Feedback API (replaces direct GitHub API calls)
+      - FEEDBACK_API_URL=${FEEDBACK_API_URL:-http://172.17.0.1:3102}
+      - GITHUB_REPO=${GITHUB_REPO:-Wibholm-solutions/family-budget}
       # SMTP via host Postfix relay
       - SMTP_HOST=172.17.0.1
       - SMTP_PORT=25
