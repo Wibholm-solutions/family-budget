@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from .. import database as db
+from ..db.facade import DataContext
 from ..dependencies import require_auth, require_write
 from ..helpers import (
     check_auth,
@@ -27,13 +28,9 @@ async def accounts_page(request: Request, _: None = Depends(require_auth)):
     user_id = get_user_id(request)
     demo = is_demo_mode(request)
 
-    effective_user_id = 0 if demo else user_id
-    accounts = db.get_all_accounts(effective_user_id)
-
-    if demo:
-        account_usage = {acc.name: 0 for acc in accounts}
-    else:
-        account_usage = {acc.name: db.get_account_usage_count(acc.name, user_id) for acc in accounts}
+    ctx = DataContext(user_id=user_id, demo=demo, advanced=is_demo_advanced(request))
+    accounts = ctx.accounts()
+    account_usage = ctx.account_usage()
 
     return templates.TemplateResponse(
         "accounts.html",

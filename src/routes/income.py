@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .. import database as db
+from ..db.facade import DataContext
 from ..dependencies import require_auth, require_write
 from ..helpers import (
     get_user_id,
@@ -28,10 +29,8 @@ async def income_page(request: Request, _: None = Depends(require_auth)):
     advanced = is_demo_advanced(request)
     user_id = get_user_id(request)
 
-    if demo:
-        incomes = db.get_demo_income(advanced)
-    else:
-        incomes = db.get_all_income(user_id)
+    ctx = DataContext(user_id=user_id, demo=demo, advanced=advanced)
+    incomes = ctx.income()
 
     return templates.TemplateResponse(
         "income.html",
