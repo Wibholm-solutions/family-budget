@@ -105,13 +105,49 @@ class TestFeedback:
         # Cleanup to avoid affecting other tests
         pages_module.feedback_attempts.pop(client_ip, None)
 
-    def test_feedback_github_api_failure(self, authenticated_client, monkeypatch):
-        """GitHub API errors should show a user-friendly error message."""
+    def test_feedback_calls_feedback_api(self, authenticated_client, monkeypatch):
+        """Feedback should POST to feedback-api instead of GitHub directly."""
         import httpx
 
         import src.routes.pages as pages_module
 
-        monkeypatch.setattr(pages_module, "GITHUB_TOKEN", "fake-token")
+        monkeypatch.setattr(pages_module, "FEEDBACK_API_URL", "http://fake-feedback-api:3000")
+
+        captured = {}
+
+        async def mock_post(*args, **kwargs):
+            captured["url"] = str(args[1])
+            captured["json"] = kwargs.get("json")
+
+            class MockResponse:
+                status_code = 201
+                def json(self_inner):
+                    return {"message": "Feedback received", "issue_url": "https://github.com/test/issues/1"}
+            return MockResponse()
+
+        monkeypatch.setattr(httpx.AsyncClient, "post", mock_post)
+
+        response = authenticated_client.post(
+            "/budget/feedback",
+            data={
+                "feedback_type": "feature",
+                "description": "This is a valid feature request with enough text.",
+            }
+        )
+        assert response.status_code == 200
+        assert "Tak for din feedback" in response.text
+        assert captured["url"] == "http://fake-feedback-api:3000/api/feedback"
+        assert captured["json"]["repo"] == pages_module.GITHUB_REPO
+        assert captured["json"]["type"] == "feature"
+        assert captured["json"]["title"].startswith("Feature request:")
+
+    def test_feedback_api_failure(self, authenticated_client, monkeypatch):
+        """feedback-api errors should show a user-friendly error message."""
+        import httpx
+
+        import src.routes.pages as pages_module
+
+        monkeypatch.setattr(pages_module, "FEEDBACK_API_URL", "http://fake-feedback-api:3000")
 
         async def mock_post(*args, **kwargs):
             raise httpx.ConnectError("Connection failed")
