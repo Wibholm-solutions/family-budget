@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
-from .. import database as db
+from ..db.facade import DataContext
 from ..dependencies import require_auth
 from ..helpers import (
     get_user_id,
@@ -20,10 +20,8 @@ async def yearly_overview_page(request: Request, _: None = Depends(require_auth)
     user_id = get_user_id(request)
     demo = is_demo_mode(request)
 
-    if demo:
-        overview = db.get_yearly_overview_demo()
-    else:
-        overview = db.get_yearly_overview(user_id)
+    ctx = DataContext(user_id=user_id, demo=demo)
+    overview = ctx.yearly_overview()
 
     return templates.TemplateResponse("yearly.html", {
         "request": request,

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
 from .. import database as db
+from ..db.facade import DataContext
 from ..dependencies import require_auth
 from ..helpers import (
     get_user_id,
@@ -47,16 +48,11 @@ async def chart_data(request: Request, _: None = Depends(require_auth)):
     user_id = get_user_id(request)
 
     # Get data based on mode
-    if demo:
-        category_totals = db.get_demo_category_totals(advanced)
-        total_income = db.get_demo_total_income(advanced)
-        total_expenses = db.get_demo_total_expenses(advanced)
-        expenses = db.get_demo_expenses(advanced)
-    else:
-        category_totals = db.get_category_totals(user_id)
-        total_income = db.get_total_income(user_id)
-        total_expenses = db.get_total_monthly_expenses(user_id)
-        expenses = db.get_all_expenses(user_id)
+    ctx = DataContext(user_id=user_id, demo=demo, advanced=advanced)
+    category_totals = ctx.category_totals()
+    total_income = ctx.total_income()
+    total_expenses = ctx.total_expenses()
+    expenses = ctx.expenses()
 
     # Get top 5 expenses by monthly amount
     sorted_expenses = sorted(expenses, key=lambda e: e.monthly_amount, reverse=True)

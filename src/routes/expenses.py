@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .. import database as db
+from ..db.facade import DataContext
 from ..dependencies import require_auth, require_write
 from ..helpers import (
     get_user_id,
@@ -91,21 +92,13 @@ async def expenses_page(request: Request, _: None = Depends(require_auth)):
     demo = is_demo_mode(request)
     advanced = is_demo_advanced(request)
 
-    if demo:
-        expenses = db.get_demo_expenses(advanced)
-        expenses_by_category = db.get_demo_expenses_by_category(advanced)
-        category_totals = db.get_demo_category_totals(advanced)
-        # Use demo user categories (user_id = 0)
-        categories = db.get_all_categories(0)
-        category_usage = {cat.name: 0 for cat in categories}
-        accounts = db.get_demo_accounts(advanced)
-    else:
-        expenses = db.get_all_expenses(user_id)
-        expenses_by_category = db.get_expenses_by_category(user_id)
-        category_totals = db.get_category_totals(user_id)
-        categories = db.get_all_categories(user_id)
-        category_usage = {cat.name: db.get_category_usage_count(cat.name, user_id) for cat in categories}
-        accounts = db.get_all_accounts(user_id)
+    ctx = DataContext(user_id=user_id, demo=demo, advanced=advanced)
+    expenses = ctx.expenses()
+    expenses_by_category = ctx.expenses_by_category()
+    category_totals = ctx.category_totals()
+    categories = ctx.categories()
+    category_usage = ctx.category_usage()
+    accounts = ctx.accounts()
 
     return templates.TemplateResponse(
         "expenses.html",

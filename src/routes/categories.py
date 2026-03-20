@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .. import database as db
+from ..db.facade import DataContext
 from ..dependencies import require_auth, require_write
 from ..helpers import (
     get_user_id,
@@ -26,15 +27,9 @@ async def categories_page(request: Request, _: None = Depends(require_auth)):
     user_id = get_user_id(request)
     demo = is_demo_mode(request)
 
-    # Use demo user (user_id = 0) for demo mode
-    effective_user_id = 0 if demo else user_id
-    categories = db.get_all_categories(effective_user_id)
-
-    # Get usage count for each category (0 for demo mode since it's read-only)
-    if demo:
-        category_usage = {cat.name: 0 for cat in categories}
-    else:
-        category_usage = {cat.name: db.get_category_usage_count(cat.name, user_id) for cat in categories}
+    ctx = DataContext(user_id=user_id, demo=demo)
+    categories = ctx.categories()
+    category_usage = ctx.category_usage()
 
     return templates.TemplateResponse(
         "categories.html",

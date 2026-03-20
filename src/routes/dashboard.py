@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
-from .. import database as db
+from ..db.facade import DataContext
 from ..dependencies import require_auth
 from ..helpers import (
     get_user_id,
@@ -24,22 +24,14 @@ async def dashboard(request: Request, _: None = Depends(require_auth)):
     user_id = get_user_id(request)
 
     # Get data (demo or real)
-    if demo:
-        incomes = db.get_demo_income(advanced)
-        total_income = db.get_demo_total_income(advanced)
-        total_expenses = db.get_demo_total_expenses(advanced)
-        expenses_by_category = db.get_demo_expenses_by_category(advanced)
-        category_totals = db.get_demo_category_totals(advanced)
-        account_totals = db.get_demo_account_totals(advanced)
-        yearly_overview = db.get_yearly_overview_demo(advanced)
-    else:
-        incomes = db.get_all_income(user_id)
-        total_income = db.get_total_income(user_id)
-        total_expenses = db.get_total_monthly_expenses(user_id)
-        expenses_by_category = db.get_expenses_by_category(user_id)
-        category_totals = db.get_category_totals(user_id)
-        account_totals = db.get_account_totals(user_id)
-        yearly_overview = db.get_yearly_overview(user_id)
+    ctx = DataContext(user_id=user_id, demo=demo, advanced=advanced)
+    incomes = ctx.income()
+    total_income = ctx.total_income()
+    total_expenses = ctx.total_expenses()
+    expenses_by_category = ctx.expenses_by_category()
+    category_totals = ctx.category_totals()
+    account_totals = ctx.account_totals()
+    yearly_overview = ctx.yearly_overview()
 
     remaining = total_income - total_expenses
 
