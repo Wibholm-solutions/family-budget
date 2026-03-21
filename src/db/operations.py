@@ -7,8 +7,7 @@ This is the audit surface for cross-domain effects.
 import sqlite3
 from dataclasses import dataclass
 
-from .connection import get_connection, transaction
-from .models import Category
+from .connection import transaction
 from .schema import DEFAULT_CATEGORIES
 from .security import hash_email, hash_password
 

@@ -4,7 +4,6 @@ Self-contained auth module - no budget imports.
 Cross-domain operations (create_user + seed categories) live in operations.py.
 """
 
-import sqlite3
 
 from .connection import get_connection
 from .models import PasswordResetToken, User
