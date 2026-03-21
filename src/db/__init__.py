@@ -3,50 +3,13 @@
 Re-exports all public names for convenient access via `from src.db import X`.
 """
 
-from .connection import DB_PATH, ensure_db_directory, get_connection
-from .demo import (
-    DEMO_EXPENSES,
-    DEMO_EXPENSES_ADVANCED,
-    DEMO_INCOME,
-    DEMO_INCOME_ADVANCED,
-    get_demo_account_totals,
-    get_demo_accounts,
-    get_demo_category_totals,
-    get_demo_expenses,
-    get_demo_expenses_by_category,
-    get_demo_income,
-    get_demo_total_expenses,
-    get_demo_total_income,
-    get_yearly_overview_demo,
-)
-from .facade import DataContext
-from .models import (
-    Account,
-    Category,
-    Expense,
-    Income,
-    PasswordResetToken,
-    User,
-)
-from .schema import DEFAULT_CATEGORIES, init_db
-from .security import (
-    PBKDF2_ITERATIONS,
-    hash_email,
-    hash_password,
-    verify_password,
-)
-from .store import (
+from .budget_store import (
     _calculate_yearly_overview,
     add_account,
     add_category,
     add_expense,
     add_income,
-    authenticate_user,
-    create_password_reset_token,
-    create_user,
-    delete_account,
     delete_all_income,
-    delete_category,
     delete_expense,
     ensure_default_categories,
     get_account_by_id,
@@ -63,21 +26,73 @@ from .store import (
     get_expenses_by_category,
     get_total_income,
     get_total_monthly_expenses,
+    get_yearly_overview,
+    update_expense,
+    update_income,
+)
+from .connection import DB_PATH, ensure_db_directory, get_connection, transaction
+from .demo import (
+    DEMO_EXPENSES,
+    DEMO_EXPENSES_ADVANCED,
+    DEMO_INCOME,
+    DEMO_INCOME_ADVANCED,
+    get_demo_account_totals,
+    get_demo_accounts,
+    get_demo_category_totals,
+    get_demo_expenses,
+    get_demo_expenses_by_category,
+    get_demo_income,
+    get_demo_total_expenses,
+    get_demo_total_income,
+    get_yearly_overview_demo,
+)
+from .facade import DataContext
+from .identity_store import (
+    authenticate_user,
+    create_password_reset_token,
     get_user_by_email,
     get_user_by_id,
     get_user_by_username,
     get_user_count,
     get_valid_reset_token,
-    get_yearly_overview,
     mark_reset_token_used,
-    migrate_user_categories,
-    update_account,
-    update_category,
-    update_expense,
-    update_income,
     update_last_login,
     update_user_email,
     update_user_password,
+)
+from .models import (
+    Account,
+    Category,
+    Expense,
+    Income,
+    PasswordResetToken,
+    User,
+)
+from .operations import (
+    CategoryUpdateResult,
+    DeleteResult,
+    create_user_with_default_categories,
+    delete_account_if_unused,
+    delete_category_if_unused,
+    migrate_user_categories,
+    rename_account_and_cascade_expenses,
+    rename_category_and_cascade_expenses,
+)
+from .schema import DEFAULT_CATEGORIES, init_db
+from .security import (
+    PBKDF2_ITERATIONS,
+    hash_email,
+    hash_password,
+    verify_password,
+)
+
+# Backward-compat aliases (callers still use db.update_category, db.create_user, etc.)
+from .store import (
+    create_user,
+    delete_account,
+    delete_category,
+    update_account,
+    update_category,
 )
 
 __all__ = [
@@ -94,13 +109,17 @@ __all__ = [
     "PBKDF2_ITERATIONS",
     "Account",
     "Category",
+    # operations (new typed API)
+    "CategoryUpdateResult",
     # facade
     "DataContext",
+    "DeleteResult",
     "Expense",
     # models
     "Income",
     "PasswordResetToken",
     "User",
+    # budget_store
     "_calculate_yearly_overview",
     "add_account",
     "add_category",
@@ -108,10 +127,14 @@ __all__ = [
     "add_income",
     "authenticate_user",
     "create_password_reset_token",
+    # backward-compat aliases
     "create_user",
+    "create_user_with_default_categories",
     "delete_account",
+    "delete_account_if_unused",
     "delete_all_income",
     "delete_category",
+    "delete_category_if_unused",
     "delete_expense",
     "ensure_db_directory",
     "ensure_default_categories",
@@ -121,7 +144,6 @@ __all__ = [
     "get_all_accounts",
     "get_all_categories",
     "get_all_expenses",
-    # store (all CRUD + aggregation)
     "get_all_income",
     "get_category_by_id",
     "get_category_totals",
@@ -151,6 +173,9 @@ __all__ = [
     "init_db",
     "mark_reset_token_used",
     "migrate_user_categories",
+    "rename_account_and_cascade_expenses",
+    "rename_category_and_cascade_expenses",
+    "transaction",
     "update_account",
     "update_category",
     "update_expense",
