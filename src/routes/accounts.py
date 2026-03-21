@@ -8,11 +8,10 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from .. import database as db
 from ..db.facade import DataContext
-from ..dependencies import require_auth, require_write
+from ..dependencies import get_data, require_write
 from ..helpers import (
     check_auth,
     get_user_id,
-    is_demo_advanced,
     is_demo_mode,
     templates,
 )
@@ -23,12 +22,8 @@ router = APIRouter(prefix="/budget")
 
 
 @router.get("/accounts", response_class=HTMLResponse)
-async def accounts_page(request: Request, _: None = Depends(require_auth)):
+async def accounts_page(request: Request, ctx: DataContext = Depends(get_data)):
     """Accounts management page."""
-    user_id = get_user_id(request)
-    demo = is_demo_mode(request)
-
-    ctx = DataContext(user_id=user_id, demo=demo, advanced=is_demo_advanced(request))
     accounts = ctx.accounts()
     account_usage = ctx.account_usage()
 
@@ -38,8 +33,8 @@ async def accounts_page(request: Request, _: None = Depends(require_auth)):
             "request": request,
             "accounts": accounts,
             "account_usage": account_usage,
-            "demo_mode": demo,
-            "demo_advanced": is_demo_advanced(request),
+            "demo_mode": ctx.demo,
+            "demo_advanced": ctx.advanced,
         }
     )
 

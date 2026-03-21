@@ -4,27 +4,16 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 
 from ..db.facade import DataContext
-from ..dependencies import require_auth
-from ..helpers import (
-    get_user_id,
-    is_demo_advanced,
-    is_demo_mode,
-    templates,
-)
+from ..dependencies import get_data
+from ..helpers import templates
 
 router = APIRouter(prefix="/budget")
 
 
 @router.get("/", response_class=HTMLResponse)
 @router.get("", response_class=HTMLResponse)
-async def dashboard(request: Request, _: None = Depends(require_auth)):
+async def dashboard(request: Request, ctx: DataContext = Depends(get_data)):
     """Main dashboard page."""
-    demo = is_demo_mode(request)
-    advanced = is_demo_advanced(request)
-    user_id = get_user_id(request)
-
-    # Get data (demo or real)
-    ctx = DataContext(user_id=user_id, demo=demo, advanced=advanced)
     incomes = ctx.income()
     total_income = ctx.total_income()
     total_expenses = ctx.total_expenses()
@@ -54,7 +43,7 @@ async def dashboard(request: Request, _: None = Depends(require_auth)):
             "category_percentages": category_percentages,
             "account_totals": account_totals,
             "yearly_overview": yearly_overview,
-            "demo_mode": demo,
-            "demo_advanced": advanced,
+            "demo_mode": ctx.demo,
+            "demo_advanced": ctx.advanced,
         }
     )

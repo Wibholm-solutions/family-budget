@@ -8,11 +8,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .. import database as db
 from ..db.facade import DataContext
-from ..dependencies import require_auth, require_write
+from ..dependencies import get_data, require_write
 from ..helpers import (
     get_user_id,
-    is_demo_advanced,
-    is_demo_mode,
     templates,
 )
 
@@ -22,12 +20,8 @@ router = APIRouter(prefix="/budget")
 
 
 @router.get("/categories", response_class=HTMLResponse)
-async def categories_page(request: Request, _: None = Depends(require_auth)):
+async def categories_page(request: Request, ctx: DataContext = Depends(get_data)):
     """Categories management page."""
-    user_id = get_user_id(request)
-    demo = is_demo_mode(request)
-
-    ctx = DataContext(user_id=user_id, demo=demo)
     categories = ctx.categories()
     category_usage = ctx.category_usage()
 
@@ -37,8 +31,8 @@ async def categories_page(request: Request, _: None = Depends(require_auth)):
             "request": request,
             "categories": categories,
             "category_usage": category_usage,
-            "demo_mode": demo,
-            "demo_advanced": is_demo_advanced(request),
+            "demo_mode": ctx.demo,
+            "demo_advanced": ctx.advanced,
         }
     )
 
