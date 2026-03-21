@@ -8,11 +8,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .. import database as db
 from ..db.facade import DataContext
-from ..dependencies import require_auth, require_write
+from ..dependencies import get_data, require_write
 from ..helpers import (
     get_user_id,
-    is_demo_advanced,
-    is_demo_mode,
     parse_danish_amount,
     templates,
 )
@@ -86,13 +84,8 @@ def validate_expense_input(
 
 
 @router.get("/expenses", response_class=HTMLResponse)
-async def expenses_page(request: Request, _: None = Depends(require_auth)):
+async def expenses_page(request: Request, ctx: DataContext = Depends(get_data)):
     """Expenses management page."""
-    user_id = get_user_id(request)
-    demo = is_demo_mode(request)
-    advanced = is_demo_advanced(request)
-
-    ctx = DataContext(user_id=user_id, demo=demo, advanced=advanced)
     expenses = ctx.expenses()
     expenses_by_category = ctx.expenses_by_category()
     category_totals = ctx.category_totals()
@@ -110,8 +103,8 @@ async def expenses_page(request: Request, _: None = Depends(require_auth)):
             "categories": categories,
             "category_usage": category_usage,
             "accounts": accounts,
-            "demo_mode": demo,
-            "demo_advanced": advanced,
+            "demo_mode": ctx.demo,
+            "demo_advanced": ctx.advanced,
         }
     )
 

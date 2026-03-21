@@ -5,12 +5,7 @@ from fastapi.responses import JSONResponse
 
 from .. import database as db
 from ..db.facade import DataContext
-from ..dependencies import require_auth
-from ..helpers import (
-    get_user_id,
-    is_demo_advanced,
-    is_demo_mode,
-)
+from ..dependencies import get_data
 
 router = APIRouter(prefix="/budget")
 
@@ -37,18 +32,12 @@ async def api_stats():
 
 
 @router.get("/api/chart-data")
-async def chart_data(request: Request, _: None = Depends(require_auth)):
+async def chart_data(request: Request, ctx: DataContext = Depends(get_data)):
     """API endpoint for chart visualizations.
 
     Returns JSON with category_totals, total_income, total_expenses, top_expenses.
     All amounts are monthly equivalents.
     """
-    demo = is_demo_mode(request)
-    advanced = is_demo_advanced(request)
-    user_id = get_user_id(request)
-
-    # Get data based on mode
-    ctx = DataContext(user_id=user_id, demo=demo, advanced=advanced)
     category_totals = ctx.category_totals()
     total_income = ctx.total_income()
     total_expenses = ctx.total_expenses()

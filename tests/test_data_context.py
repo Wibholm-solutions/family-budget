@@ -72,6 +72,30 @@ class TestDataContextDemo:
         assert all(v == 0 for v in usage.values())
 
 
+class TestBudgetReaderProtocol:
+    """DataContext must satisfy BudgetReader at runtime."""
+
+    def test_datacontext_satisfies_budget_reader(self):
+        from src.db.facade import DataContext
+        from src.db.ports import BudgetReader
+        ctx = DataContext(user_id=0, demo=True)
+        assert isinstance(ctx, BudgetReader)
+
+
+class TestWritableProperty:
+    """writable is False in demo, True in real mode."""
+
+    def test_demo_not_writable(self):
+        from src.db.facade import DataContext
+        ctx = DataContext(user_id=0, demo=True)
+        assert ctx.writable is False
+
+    def test_real_is_writable(self):
+        from src.db.facade import DataContext
+        ctx = DataContext(user_id=1, demo=False)
+        assert ctx.writable is True
+
+
 class TestDataContextReal:
     """DataContext with demo=False should query the real DB."""
 

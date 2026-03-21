@@ -8,11 +8,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .. import database as db
 from ..db.facade import DataContext
-from ..dependencies import require_auth, require_write
+from ..dependencies import get_data, require_write
 from ..helpers import (
     get_user_id,
-    is_demo_advanced,
-    is_demo_mode,
     parse_danish_amount,
     templates,
 )
@@ -23,18 +21,13 @@ router = APIRouter(prefix="/budget")
 
 
 @router.get("/income", response_class=HTMLResponse)
-async def income_page(request: Request, _: None = Depends(require_auth)):
+async def income_page(request: Request, ctx: DataContext = Depends(get_data)):
     """Income edit page."""
-    demo = is_demo_mode(request)
-    advanced = is_demo_advanced(request)
-    user_id = get_user_id(request)
-
-    ctx = DataContext(user_id=user_id, demo=demo, advanced=advanced)
     incomes = ctx.income()
 
     return templates.TemplateResponse(
         "income.html",
-        {"request": request, "incomes": incomes, "demo_mode": demo, "demo_advanced": advanced}
+        {"request": request, "incomes": incomes, "demo_mode": ctx.demo, "demo_advanced": ctx.advanced}
     )
 
 

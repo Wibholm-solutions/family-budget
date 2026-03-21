@@ -14,7 +14,8 @@ Usage:
 
 from fastapi import Request
 
-from .helpers import check_auth, is_demo_mode
+from .db.facade import DataContext
+from .helpers import check_auth, get_user_id, is_demo_advanced, is_demo_mode
 
 
 class AuthRequired(Exception):
@@ -71,3 +72,17 @@ def require_write(redirect_to: str):
             raise DemoBlocked(redirect_to)
 
     return _dep
+
+
+async def get_data(request: Request) -> DataContext:
+    """Dependency: resolve auth + demo state + DataContext in one step.
+
+    Raises AuthRequired if unauthenticated. Routes using Depends(get_data)
+    don't need a separate Depends(require_auth).
+    """
+    if not check_auth(request):
+        raise AuthRequired()
+    demo = is_demo_mode(request)
+    advanced = is_demo_advanced(request)
+    user_id = get_user_id(request)
+    return DataContext(user_id=user_id, demo=demo, advanced=advanced)
