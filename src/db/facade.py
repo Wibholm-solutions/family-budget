@@ -16,7 +16,7 @@ from .demo import (
     get_yearly_overview_demo,
 )
 from .models import Account, Category, Expense, Income
-from .store import (
+from .budget_store import (
     get_account_totals,
     get_account_usage_count,
     get_all_accounts,

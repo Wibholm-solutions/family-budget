@@ -4,7 +4,7 @@ Hardcoded data for demo mode. Reuses _calculate_yearly_overview from store.
 """
 
 from .models import Account, Expense, Income
-from .store import _calculate_yearly_overview
+from .budget_store import _calculate_yearly_overview
 
 # Demo data - typical Danish household budget
 DEMO_INCOME = [
