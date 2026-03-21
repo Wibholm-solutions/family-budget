@@ -44,6 +44,11 @@ class DataContext:
         self.demo = demo
         self.advanced = advanced
 
+    @property
+    def writable(self) -> bool:
+        """True when mutations are allowed (non-demo mode)."""
+        return not self.demo
+
     def expenses(self) -> list[Expense]:
         if self.demo:
             return get_demo_expenses(self.advanced)
