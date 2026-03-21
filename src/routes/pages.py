@@ -67,9 +67,9 @@ async def privacy_page(request: Request):
 # Feedback
 # =============================================================================
 
-# GitHub repository for feedback issues
-GITHUB_REPO = os.environ.get("GITHUB_REPO", "saabendtsen/family-budget")
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+# Feedback API configuration
+FEEDBACK_API_URL = os.environ.get("FEEDBACK_API_URL", "")
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "Wibholm-solutions/family-budget")
 
 # Rate limiting for feedback (IP -> list of timestamps)
 feedback_attempts: dict[str, list[float]] = defaultdict(list)
@@ -111,7 +111,7 @@ async def submit_feedback(  # noqa: PLR0911, PLR0912
     website: str = Form(""),  # Honeypot field
     _: None = Depends(require_auth),
 ):
-    """Submit feedback - creates a GitHub issue."""
+    """Submit feedback via feedback-api."""
     demo = is_demo_mode(request)
     client_ip = request.client.host if request.client else "unknown"
 
@@ -162,29 +162,25 @@ async def submit_feedback(  # noqa: PLR0911, PLR0912
         body_parts.append(f"\n---\n**Kontakt email:** {email}")
     body_parts.append("\n---\n*Sendt via Budget app feedback*")
 
-    # Create GitHub issue if token is configured
-    if GITHUB_TOKEN:
+    # Send to feedback-api
+    if FEEDBACK_API_URL:
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"https://api.github.com/repos/{GITHUB_REPO}/issues",
-                    headers={
-                        "Authorization": f"Bearer {GITHUB_TOKEN}",
-                        "Accept": "application/vnd.github+json",
-                        "X-GitHub-Api-Version": "2022-11-28",
-                    },
+            async with httpx.AsyncClient() as http_client:
+                response = await http_client.post(
+                    f"{FEEDBACK_API_URL}/api/feedback",
                     json={
+                        "repo": GITHUB_REPO,
                         "title": f"{config['prefix']}: {description[:50]}...",
-                        "body": "\n".join(body_parts),
-                        "labels": [config["label"], "from-app"],
+                        "description": "\n".join(body_parts),
+                        "type": feedback_type,
                     },
                     timeout=10.0,
                 )
                 if response.status_code not in (200, 201):
-                    logger.error(f"GitHub API error: {response.status_code} - {response.text}")
-                    raise Exception("GitHub API error")
+                    logger.error(f"feedback-api error: {response.status_code} - {response.text}")
+                    raise Exception("feedback-api error")
         except Exception as e:
-            logger.error(f"Failed to create GitHub issue: {e}")
+            logger.error(f"Failed to send feedback: {e}")
             return templates.TemplateResponse(
                 "feedback.html",
                 {
@@ -195,7 +191,7 @@ async def submit_feedback(  # noqa: PLR0911, PLR0912
                 }
             )
     else:
-        # No token configured - just log the feedback
+        # No feedback API configured - just log
         logger.info(f"Feedback ({feedback_type}): {description[:100]}...")
 
     record_feedback_attempt(client_ip)
