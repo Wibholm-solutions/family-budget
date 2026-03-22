@@ -71,7 +71,7 @@ def _validate_frequency(freq: str, errors: list[str]) -> str | None:
     return freq
 
 
-def _parse_and_validate_months(
+def _parse_and_validate_months(  # noqa: PLR0911
     months_str: str | None, freq: str, errors: list[str]
 ) -> list[int] | None:
     """Parse comma-separated month ints, validate range and count."""

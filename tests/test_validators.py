@@ -3,7 +3,13 @@
 import pytest
 from fastapi import HTTPException
 
-from src.validators import ValidationResult, validate_account, validate_category, validate_expense, validate_income
+from src.validators import (
+    ValidationResult,
+    validate_account,
+    validate_category,
+    validate_expense,
+    validate_income,
+)
 
 
 class TestValidationResult:
