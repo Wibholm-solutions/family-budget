@@ -106,3 +106,46 @@ def validate_expense(
     parsed["account"] = account if account else None
 
     return ValidationResult(errors=errors, parsed=parsed)
+
+
+def validate_income(
+    name: str | None,
+    amount_str: str,
+    frequency: str,
+) -> ValidationResult:
+    errors: list[str] = []
+    parsed: dict[str, object] = {}
+
+    parsed["name"] = _validate_name(name, "Indkomst", errors)
+    parsed["amount"] = _parse_and_validate_amount(amount_str, errors)
+    parsed["frequency"] = _validate_frequency(frequency, errors)
+
+    return ValidationResult(errors=errors, parsed=parsed)
+
+
+def validate_category(
+    name: str | None,
+    icon: str | None,
+) -> ValidationResult:
+    errors: list[str] = []
+    parsed: dict[str, object] = {}
+
+    parsed["name"] = _validate_name(name, "Kategori", errors)
+    if icon is None or not icon.strip():
+        errors.append("Ikon må ikke være tomt")
+        parsed["icon"] = None
+    else:
+        parsed["icon"] = icon.strip()
+
+    return ValidationResult(errors=errors, parsed=parsed)
+
+
+def validate_account(
+    name: str | None,
+) -> ValidationResult:
+    errors: list[str] = []
+    parsed: dict[str, object] = {}
+
+    parsed["name"] = _validate_name(name, "Konto", errors)
+
+    return ValidationResult(errors=errors, parsed=parsed)
