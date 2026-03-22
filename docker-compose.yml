@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     ports:
       - "8086:8086"
+    labels:
+      - "dashboard.healthcheck.url=http://localhost:8086/budget/health"
     volumes:
       # Persist database outside container
       - ./data:/app/data
