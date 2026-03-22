@@ -13,9 +13,9 @@ from ..helpers import (
     get_user_id,
     is_demo_advanced,
     is_demo_mode,
-    parse_danish_amount,
     templates,
 )
+from ..validators import validate_income
 
 logger = logging.getLogger(__name__)
 
@@ -53,14 +53,9 @@ async def update_income(request: Request, _: None = Depends(require_write("/budg
             amount_str = form.get(f"income_amount_{i}", "0")
             frequency = form.get(f"income_frequency_{i}", "monthly")
             if name:  # Only save if name is provided
-                try:
-                    amount = parse_danish_amount(amount_str) if amount_str else 0.00
-                except ValueError:
-                    raise HTTPException(status_code=400, detail=f"Ugyldigt beløb format for {name}") from None
-                # Validate frequency
-                if frequency not in ('monthly', 'quarterly', 'semi-annual', 'yearly'):
-                    frequency = 'monthly'
-                incomes_to_save.append((name, amount, frequency))
+                result = validate_income(name, amount_str if amount_str else "0", frequency)
+                result.raise_if_invalid()
+                incomes_to_save.append((result.parsed["name"], result.parsed["amount"], result.parsed["frequency"]))
             i += 1
 
         # Clear existing and save new

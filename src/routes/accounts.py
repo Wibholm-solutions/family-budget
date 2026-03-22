@@ -16,6 +16,7 @@ from ..helpers import (
     is_demo_mode,
     templates,
 )
+from ..validators import validate_account
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,7 @@ async def add_account(
     _: None = Depends(require_write("/budget/accounts")),
 ):
     """Add a new account."""
+    validate_account(name).raise_if_invalid()
     user_id = get_user_id(request)
     try:
         db.add_account(user_id, name)
@@ -71,9 +73,10 @@ async def add_account_json(request: Request, name: str = Form(...)):  # noqa: PL
         return JSONResponse({"success": False, "error": "Ikke tilgængelig i demo"}, status_code=403)
 
     user_id = get_user_id(request)
-    name = name.strip()
-    if not name:
-        return JSONResponse({"success": False, "error": "Navn er påkrævet"}, status_code=400)
+    result = validate_account(name)
+    if not result.ok:
+        return JSONResponse({"success": False, "error": "; ".join(result.errors)}, status_code=400)
+    name = result.parsed["name"]
 
     try:
         db.add_account(user_id, name)
@@ -93,6 +96,7 @@ async def edit_account(
     _: None = Depends(require_write("/budget/accounts")),
 ):
     """Edit an account."""
+    validate_account(name).raise_if_invalid()
     user_id = get_user_id(request)
     try:
         updated_count = db.update_account(account_id, user_id, name)
