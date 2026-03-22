@@ -3,7 +3,7 @@
 import pytest
 from fastapi import HTTPException
 
-from src.validators import ValidationResult, validate_expense
+from src.validators import ValidationResult, validate_account, validate_category, validate_expense, validate_income
 
 
 class TestValidationResult:
@@ -97,4 +97,88 @@ class TestValidateExpense:
 
     def test_wrong_month_count(self):
         result = validate_expense("Test", "1000", "quarterly", "3,6", None)
+        assert not result.ok
+
+
+class TestValidateIncome:
+    """Tests for validate_income."""
+
+    def test_valid_income(self):
+        result = validate_income("Løn", "30000", "monthly")
+        assert result.ok
+        assert result.parsed["name"] == "Løn"
+        assert result.parsed["amount"] == 30000.0
+        assert result.parsed["frequency"] == "monthly"
+
+    def test_invalid_frequency_is_error(self):
+        result = validate_income("Løn", "30000", "biweekly")
+        assert not result.ok
+
+    def test_invalid_amount_format(self):
+        result = validate_income("Løn", "abc", "monthly")
+        assert not result.ok
+
+    def test_negative_amount(self):
+        result = validate_income("Løn", "-500", "monthly")
+        assert not result.ok
+
+    def test_empty_name(self):
+        result = validate_income("", "30000", "monthly")
+        assert not result.ok
+
+    def test_error_accumulation(self):
+        result = validate_income("", "abc", "biweekly")
+        assert not result.ok
+        assert len(result.errors) == 3
+
+
+class TestValidateCategory:
+    """Tests for validate_category."""
+
+    def test_valid_category(self):
+        result = validate_category("Mad", "🍕")
+        assert result.ok
+        assert result.parsed["name"] == "Mad"
+        assert result.parsed["icon"] == "🍕"
+
+    def test_empty_name(self):
+        result = validate_category("", "🍕")
+        assert not result.ok
+
+    def test_whitespace_name(self):
+        result = validate_category("   ", "🍕")
+        assert not result.ok
+
+    def test_name_too_long(self):
+        result = validate_category("A" * 201, "🍕")
+        assert not result.ok
+
+    def test_empty_icon(self):
+        result = validate_category("Mad", "")
+        assert not result.ok
+
+    def test_both_invalid(self):
+        result = validate_category("", "")
+        assert not result.ok
+        assert len(result.errors) == 2
+
+
+class TestValidateAccount:
+    """Tests for validate_account."""
+
+    def test_valid_account(self):
+        result = validate_account("Nordea")
+        assert result.ok
+        assert result.parsed["name"] == "Nordea"
+
+    def test_empty_name(self):
+        result = validate_account("")
+        assert not result.ok
+
+    def test_whitespace_name(self):
+        result = validate_account("   ")
+        assert not result.ok
+
+    def test_name_too_long(self):
+        result = validate_account("A" * 201)
         assert not result.ok

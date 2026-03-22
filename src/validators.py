@@ -128,3 +128,61 @@ def validate_expense(
         parsed["account"] = account
 
     return ValidationResult(errors=errors, parsed=parsed)
+
+
+def validate_income(
+    name: str | None,
+    amount_str: str,
+    frequency: str,
+) -> ValidationResult:
+    """Validate income input fields."""
+    errors: list[str] = []
+    parsed: dict[str, object] = {}
+
+    validated_name = _validate_name(name, "Indkomst", errors)
+    if validated_name is not None:
+        parsed["name"] = validated_name
+
+    validated_freq = _validate_frequency(frequency, errors)
+    if validated_freq is not None:
+        parsed["frequency"] = validated_freq
+
+    amount = _parse_and_validate_amount(amount_str, errors)
+    if amount is not None:
+        parsed["amount"] = amount
+
+    return ValidationResult(errors=errors, parsed=parsed)
+
+
+def validate_category(
+    name: str | None,
+    icon: str | None,
+) -> ValidationResult:
+    """Validate category input fields."""
+    errors: list[str] = []
+    parsed: dict[str, object] = {}
+
+    validated_name = _validate_name(name, "Kategori", errors)
+    if validated_name is not None:
+        parsed["name"] = validated_name
+
+    if not icon or not icon.strip():
+        errors.append("Ikon er påkrævet")
+    else:
+        parsed["icon"] = icon.strip()
+
+    return ValidationResult(errors=errors, parsed=parsed)
+
+
+def validate_account(
+    name: str | None,
+) -> ValidationResult:
+    """Validate account input fields."""
+    errors: list[str] = []
+    parsed: dict[str, object] = {}
+
+    validated_name = _validate_name(name, "Konto", errors)
+    if validated_name is not None:
+        parsed["name"] = validated_name
+
+    return ValidationResult(errors=errors, parsed=parsed)
