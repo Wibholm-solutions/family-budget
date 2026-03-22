@@ -13,6 +13,7 @@ from ..helpers import (
     get_user_id,
     templates,
 )
+from ..validators import validate_category
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ async def add_category(
     _: None = Depends(require_write("/budget/categories")),
 ):
     """Add a new category."""
+    validate_category(name, icon).raise_if_invalid()
     user_id = get_user_id(request)
     try:
         db.add_category(user_id, name, icon)
@@ -67,6 +69,7 @@ async def edit_category(
     _: None = Depends(require_write("/budget/categories")),
 ):
     """Edit a category."""
+    validate_category(name, icon).raise_if_invalid()
     user_id = get_user_id(request)
     try:
         updated_count = db.update_category(category_id, user_id, name, icon)
