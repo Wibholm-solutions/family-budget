@@ -10,27 +10,34 @@
 
 ### Problem
 
-Several routes call `validate_account(name).raise_if_invalid()` or `validate_category(name, icon).raise_if_invalid()` but then pass the original un-stripped `name`/`icon` to the database. The stripped values in `result.parsed` are discarded. This means whitespace like `"  Nordea  "` passes validation but gets stored with leading/trailing spaces.
+Several routes call `validate_account(name).raise_if_invalid()` or `validate_category(name, icon).raise_if_invalid()` but then pass the original un-stripped `name`/`icon` to the database and error messages. The stripped values in `result.parsed` are discarded. This means whitespace like `"  Nordea  "` passes validation but gets stored with leading/trailing spaces and shown with spaces in error messages.
 
-The `add_account_json` route already does this correctly — it uses `result.parsed["name"]`.
+The `add_account_json` route already does this correctly — it reassigns `name = result.parsed["name"]` early.
 
 ### Solution
 
-Change the pattern in 4 route handlers:
+Follow the same pattern as `add_account_json`: reassign local variables from `result.parsed` immediately after validation. This ensures both DB calls and error messages use the stripped values.
 
 **`src/routes/accounts.py`** — `add_account` and `edit_account`:
 ```python
 result = validate_account(name)
 result.raise_if_invalid()
-# use result.parsed["name"] instead of raw name
+name = result.parsed["name"]
+# all subsequent code uses stripped name (DB call + error message)
 ```
 
 **`src/routes/categories.py`** — `add_category` and `edit_category`:
 ```python
 result = validate_category(name, icon)
 result.raise_if_invalid()
-# use result.parsed["name"] and result.parsed["icon"] instead of raw values
+name = result.parsed["name"]
+icon = result.parsed["icon"]
+# all subsequent code uses stripped values
 ```
+
+### Tests
+
+Fix 1 changes route behavior (stripping whitespace before DB storage). This is covered implicitly by `raise_if_invalid()` rejecting whitespace-only names. For whitespace-padded-but-valid names (e.g. `"  Nordea  "`), existing E2E tests exercise the routes end-to-end. No new tests needed — the fix is mechanical variable reassignment.
 
 ### Files changed
 
@@ -53,7 +60,9 @@ This is fragile — if error messages change, the filter silently breaks.
 
 ### Solution
 
-Add `skip_name: bool = False` parameter to `validate_expense()`. When `True`, skip the `_validate_name()` call entirely. Update the shim to pass `skip_name=True` and remove the substring filter.
+Add `skip_name: bool = False` parameter to `validate_expense()`. When `True`, skip the `_validate_name()` call entirely — no `"name"` key appears in `parsed`, no name-related errors are appended. Update the shim to pass `skip_name=True` and remove the substring filter.
+
+The shim accesses `result.parsed["amount"]` and `result.parsed["months"]` which are always set when their respective validations pass. When validation fails, `raise_if_invalid()` (called via the shim raising `HTTPException`) prevents access to `parsed`. The existing KeyError-on-failure behavior is inherited from the current code and is out of scope for this fix.
 
 ### Files changed
 
@@ -68,3 +77,4 @@ Add `skip_name: bool = False` parameter to `validate_expense()`. When `True`, sk
 - Plan files (#160/#161) included in the PR diff — not addressed here
 - Expense name validation in expense routes — separate concern
 - Typed result classes for `parsed` dict — future improvement
+- KeyError when accessing `parsed` after validation failure — latent issue, separate fix
