@@ -95,6 +95,39 @@
         </div>
     </form>
 
+    <!-- Eksporter -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
+        <h2 class="font-medium text-gray-900 dark:text-white mb-3">Eksporter</h2>
+        <div class="space-y-2">
+            <button
+                id="export-summary-btn"
+                onclick="exportBudgetImage('summary')"
+                class="w-full text-left px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-3"
+            >
+                <i data-lucide="image" class="w-5 h-5 text-gray-400"></i>
+                <div>
+                    <div class="text-sm font-medium">Oversigt som billede</div>
+                    <div class="text-xs text-gray-400">Kategorier og totaler</div>
+                </div>
+            </button>
+            <button
+                id="export-detailed-btn"
+                onclick="exportBudgetImage('detailed')"
+                class="w-full text-left px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-3"
+            >
+                <i data-lucide="file-image" class="w-5 h-5 text-gray-400"></i>
+                <div>
+                    <div class="text-sm font-medium">Detaljeret som billede</div>
+                    <div class="text-xs text-gray-400">Alle udgifter og indkomster</div>
+                </div>
+            </button>
+        </div>
+        <div id="export-error" class="hidden mt-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-3 py-2 rounded-lg text-sm">
+            <i data-lucide="alert-circle" class="w-4 h-4 inline mr-1"></i>
+            <span id="export-error-text"></span>
+        </div>
+    </div>
+
     <!-- Logout -->
     <a
         href="/budget/logout"
