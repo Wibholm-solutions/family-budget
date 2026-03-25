@@ -54,34 +54,73 @@ Nyt API-endpoint: `GET /budget/api/export-data`
   - `period`: aktiv periode (month/year)
   - `date_label`: formateret dato-label
 - Designet til genbrug for fremtidig CSV-eksport
+- Demo-brugere kan eksportere (read-only operation, bruger `Depends(get_data)` som håndterer demo-mode transparent)
+
+**Eksempel-response:**
+```json
+{
+  "date_label": "marts 2026",
+  "total_income": 45000.0,
+  "total_expenses": 32000.0,
+  "remaining": 13000.0,
+  "incomes": [
+    {"person": "Anders", "amount": 25000.0, "frequency": "monthly"},
+    {"person": "Mette", "amount": 20000.0, "frequency": "monthly"}
+  ],
+  "category_totals": {
+    "Bolig": {"total": 12000.0, "icon": "home"},
+    "Transport": {"total": 4500.0, "icon": "car"},
+    "Mad": {"total": 6000.0, "icon": "utensils"}
+  },
+  "expenses_by_category": {
+    "Bolig": [
+      {"name": "Husleje", "amount": 10000.0, "account": "Fælleskonto"},
+      {"name": "Forsikring", "amount": 2000.0, "account": null}
+    ]
+  }
+}
+```
+
+Alle beløb er månedsnormaliserede (`monthly_amount`). `account` kan være `null` — vises som tom i eksport.
 
 ### Eksport-flow
 1. Bruger klikker "Oversigt som billede" eller "Detaljeret som billede"
 2. JavaScript fetcher `/budget/api/export-data`
 3. Bygger skjult `<div>` med dedikeret eksport-layout (ikke screenshot af eksisterende UI)
-4. Pie chart: renderer Chart.js doughnut canvas → `toDataURL()` → `<img>` i eksport-div
-5. `htmlToImage.toBlob(div)` → `URL.createObjectURL()` → trigger download via `<a>` element
-6. Rydder op: fjerner skjult div fra DOM
+4. Pie chart: opret midlertidig `<canvas>`, instansier Chart.js med `animation: false`, kald `canvas.toDataURL()` → `<img>` i eksport-div
+5. Lucide-ikoner: kald `lucide.createIcons()` på eksport-div'en så SVG-ikoner renderes korrekt
+6. `htmlToImage.toBlob(div)` → `URL.createObjectURL()` → trigger download via `<a>` element
+7. Rydder op: fjerner skjult div + midlertidig canvas fra DOM
+
+**Fejlhåndtering:**
+- Fetch-fejl (401, 500, netværk): vis kort fejlbesked til brugeren, ingen download
+- `htmlToImage.toBlob()` fejl: vis fejlbesked, ryd op
+- Loading-state: knappen viser "Eksporterer..." mens render kører
 
 ### Layout
 - Smal bredde (~400px) — optimeret til mobil-feeds (Reddit, besked-apps)
 - Portrait-orientering
-- Respekterer brugerens dark/light mode
+- Respekterer brugerens dark/light mode — eksport-div arver `dark` klasse fra `<html>` (Tailwind `darkMode: 'class'`)
 - Filnavn: `budget-oversigt-2026-03.png` / `budget-detaljer-2026-03.png`
 
 ## Filer der ændres
 
 | Fil | Ændring |
 |-----|---------|
-| `templates/account.html` | Tilføj "Eksporter"-sektion med to knapper + eksport-JS |
+| `templates/account.html` | Tilføj "Eksporter"-sektion med knapper, eksport-JS, og `html-to-image` CDN (kun denne side) |
 | `src/routes/api_endpoints.py` | Nyt `GET /budget/api/export-data` endpoint |
-| `templates/base.html` | Tilføj `html-to-image` CDN script-tag |
 
 ## Sikkerhed
 
 - Endpoint bruger `require_auth` dependency — session-baseret autentificering
 - `user_id` hentes fra session, aldrig fra request-parametre
 - Ingen mulighed for at tilgå andre brugeres data
+
+## Test
+
+- Unit test: `/budget/api/export-data` returnerer korrekt JSON-struktur for autentificeret bruger
+- Unit test: endpoint afviser uautentificerede requests
+- E2E test: "Eksporter"-sektion vises på Konto-siden med begge knapper
 
 ## Fremtidig udvidelse
 
