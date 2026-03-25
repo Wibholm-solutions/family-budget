@@ -8,7 +8,6 @@ This file defines the operational rules for Claude Code within the Family Budget
 
 ## 2. CI/CD & Deployment (Operational Facts)
 - **CI Pipeline:** Tests run on all PRs/pushes to master (`.github/workflows/ci.yml`).
-- **Release:** Automatic via `release-please` and `automerge-release`.
 - **Manual Deploy:** `cd ~/projects/family-budget && docker compose up -d --build`.
 - **Auto-Deploy:** Currently **disabled** to avoid overwriting feature branches on server.
 - **Dockerfile:** When adding a new top-level directory (e.g. `static/`, `assets/`), always add a corresponding `COPY <dir>/ ./<dir>/` line to the Dockerfile.

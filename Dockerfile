@@ -21,10 +21,6 @@ COPY src/ ./src/
 COPY templates/ ./templates/
 COPY static/ ./static/
 
-# Version can be set at build time, defaults to 0.0.0
-ARG APP_VERSION=0.0.0
-ENV APP_VERSION=$APP_VERSION
-
 # Create data directory
 RUN mkdir -p /app/data
 

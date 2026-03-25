@@ -6,7 +6,6 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from . import __version__
 from . import database as db
 from .helpers import (  # noqa: F401 -- backward compat for tests
     DEMO_SESSION_ID,
@@ -35,9 +34,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Family Budget",
     description="A simple family budget tracker",
-    version=__version__
 )
-app.state.version = __version__
 
 # Add security and rate limiting middleware
 app.add_middleware(SecurityHeadersMiddleware)
@@ -46,6 +43,7 @@ app.add_middleware(RateLimitMiddleware, max_attempts=5, window_seconds=300)
 # Auth/demo exception handlers
 from fastapi import Request as _Request  # noqa: E402
 from fastapi.responses import RedirectResponse as _RedirectResponse  # noqa: E402
+
 from .dependencies import AuthRequired, DemoBlocked  # noqa: E402
 
 
