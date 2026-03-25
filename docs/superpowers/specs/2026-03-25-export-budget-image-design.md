@@ -12,7 +12,7 @@ Brugere kan eksportere deres budget-oversigt som et mobilvenligt PNG-billede til
 
 ## UI Placering
 
-Eksport-knapper placeres på **Konto-siden** (`/budget/account`) som en "Eksporter"-sektion. Dette holder dashboardet rent og giver plads til fremtidige eksport-formater (CSV).
+Eksport-knapper placeres på **Konto-siden** (`/budget/settings`, template: `templates/settings.html`) som en "Eksporter"-sektion. Dette holder dashboardet rent og giver plads til fremtidige eksport-formater (CSV).
 
 ```
 Eksporter
@@ -51,8 +51,7 @@ Nyt API-endpoint: `GET /budget/api/export-data`
   - `expenses_by_category`: dict med kategori → liste af udgifter (navn, beløb, konto)
   - `category_totals`: dict med kategori → total
   - `total_income`, `total_expenses`, `remaining`
-  - `period`: aktiv periode (month/year)
-  - `date_label`: formateret dato-label
+  - `date_label`: formateret dato-label (fx "marts 2026")
 - Designet til genbrug for fremtidig CSV-eksport
 - Demo-brugere kan eksportere (read-only operation, bruger `Depends(get_data)` som håndterer demo-mode transparent)
 
@@ -107,7 +106,7 @@ Alle beløb er månedsnormaliserede (`monthly_amount`). `account` kan være `nul
 
 | Fil | Ændring |
 |-----|---------|
-| `templates/account.html` | Tilføj "Eksporter"-sektion med knapper, eksport-JS, og `html-to-image` CDN (kun denne side) |
+| `templates/settings.html` | Tilføj "Eksporter"-sektion med knapper, eksport-JS, og `html-to-image` CDN (kun denne side) |
 | `src/routes/api_endpoints.py` | Nyt `GET /budget/api/export-data` endpoint |
 
 ## Sikkerhed

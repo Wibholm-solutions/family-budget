@@ -22,6 +22,16 @@
 
 ---
 
+### Task 0: Create Feature Branch
+
+- [ ] **Step 1: Create and switch to feature branch**
+
+```bash
+git checkout -b feature/export-budget-image
+```
+
+---
+
 ### Task 1: Export Data Endpoint — Tests
 
 **Files:**
@@ -172,6 +182,24 @@ git commit -m "test: add failing tests for export-data endpoint (#79)"
 
 Add to `src/routes/api_endpoints.py`, after the `chart_data` endpoint:
 
+Also add these imports at the top of the file (after existing imports):
+
+```python
+from datetime import datetime
+```
+
+Add this constant after the `router` definition:
+
+```python
+DANISH_MONTHS = {
+    1: "januar", 2: "februar", 3: "marts", 4: "april",
+    5: "maj", 6: "juni", 7: "juli", 8: "august",
+    9: "september", 10: "oktober", 11: "november", 12: "december",
+}
+```
+
+Then add the endpoint:
+
 ```python
 @router.get("/api/export-data")
 async def export_data(request: Request, ctx: DataContext = Depends(get_data)):
@@ -180,16 +208,8 @@ async def export_data(request: Request, ctx: DataContext = Depends(get_data)):
     Returns all budget data as JSON. All amounts are monthly equivalents.
     Auth required — returns only the authenticated user's data.
     """
-    import locale
-    from datetime import datetime
-
-    # Date label: "marts 2026" format
-    try:
-        locale.setlocale(locale.LC_TIME, "da_DK.UTF-8")
-    except locale.Error:
-        pass  # Fall back to default locale
     now = datetime.now()
-    date_label = now.strftime("%B %Y").lower()
+    date_label = f"{DANISH_MONTHS[now.month]} {now.year}"
 
     total_income = ctx.total_income()
     total_expenses = ctx.total_expenses()
@@ -626,11 +646,9 @@ git commit -m "test: add E2E test for export buttons on Konto page (#79)"
 Run: `python3 -m pytest tests/ e2e/ -q 2>&1 | tail -40`
 Expected: All tests PASS
 
-- [ ] **Step 2: Create feature branch and PR**
+- [ ] **Step 2: Push and create PR**
 
 ```bash
-git checkout -b feature/export-budget-image
-# Cherry-pick or rebase commits from master if needed
 git push -u origin feature/export-budget-image
 gh pr create --title "feat: export budget overview as image (#79)" --body "..."
 ```
