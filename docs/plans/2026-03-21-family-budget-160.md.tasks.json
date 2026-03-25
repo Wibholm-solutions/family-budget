@@ -1,0 +1,10 @@
+{
+  "planPath": "docs/plans/2026-03-21-family-budget-160.md",
+  "tasks": [
+    {"id": 0, "subject": "Task 1: Add BudgetReader Protocol + writable property", "status": "pending"},
+    {"id": 1, "subject": "Task 2: Add get_data dependency to dependencies.py", "status": "pending", "blockedBy": [0]},
+    {"id": 2, "subject": "Task 3: Migrate 7 routes to Depends(get_data)", "status": "pending", "blockedBy": [1]},
+    {"id": 3, "subject": "Task 4: Final verification and cleanup", "status": "pending", "blockedBy": [2]}
+  ],
+  "lastUpdated": "2026-03-21T12:00:00Z"
+}

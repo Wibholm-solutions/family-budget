@@ -11,76 +11,29 @@ from ..db.facade import DataContext
 from ..dependencies import get_data, require_write
 from ..helpers import (
     get_user_id,
-    parse_danish_amount,
     templates,
+)
+from ..validators import (
+    MONTHS_REQUIRED,  # noqa: F401
+    VALID_FREQUENCIES,  # noqa: F401
+    validate_expense,
 )
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/budget")
 
-VALID_FREQUENCIES = ('monthly', 'quarterly', 'semi-annual', 'yearly')
-
-MONTHS_REQUIRED = {
-    'quarterly': 4,
-    'semi-annual': 2,
-    'yearly': 1,
-}
-
-
-def parse_months(months_str: str | None, frequency: str) -> list[int] | None:
-    """Parse and validate months form field.
-
-    Returns list of month ints, or None if no months specified.
-    Raises HTTPException(400) if validation fails.
-    """
-    if frequency == 'monthly':
-        return None
-
-    if not months_str or not months_str.strip():
-        return None
-
-    try:
-        months = [int(m.strip()) for m in months_str.split(',')]
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Ugyldige måneder") from None
-
-    if any(m < 1 or m > 12 for m in months):
-        raise HTTPException(status_code=400, detail="Måneder skal være mellem 1 og 12")
-
-    expected = MONTHS_REQUIRED.get(frequency)
-    if expected and len(months) != expected:
-        raise HTTPException(status_code=400, detail=f"Vælg præcis {expected} måneder for denne frekvens")
-
-    return sorted(months)
-
-
 def validate_expense_input(
     amount_str: str,
     frequency: str,
     months_str: str | None,
 ) -> tuple[float, list[int] | None]:
-    """Validate and parse shared expense input fields.
-
-    Raises HTTPException(400) on any validation failure.
-    Returns (amount_float, months_list).
-    """
-    if frequency not in VALID_FREQUENCIES:
-        raise HTTPException(status_code=400, detail="Ugyldig frekvens")
-
-    try:
-        amount_float = parse_danish_amount(amount_str)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Ugyldigt beløb format") from None
-
-    if amount_float < 0:
-        raise HTTPException(status_code=400, detail="Beløb skal være positivt")
-    if amount_float > 1000000:
-        raise HTTPException(status_code=400, detail="Beløb er for stort")
-
-    months_list = parse_months(months_str if months_str else None, frequency)
-
-    return amount_float, months_list
+    """Shim: delegates to validate_expense() for backward compatibility."""
+    result = validate_expense(None, amount_str, frequency, months_str, None)
+    non_name_errors = [e for e in result.errors if "navn" not in e.lower()]
+    if non_name_errors:
+        raise HTTPException(status_code=400, detail=non_name_errors[0])
+    return result.parsed["amount"], result.parsed["months"]
 
 
 @router.get("/expenses", response_class=HTMLResponse)
