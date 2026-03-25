@@ -1,9 +1,0 @@
-{
-  "planPath": "docs/plans/2026-03-19-family-budget-122.md",
-  "tasks": [
-    {"id": 0, "subject": "Task 1: Write failing tests for DB-aware health endpoint", "status": "pending"},
-    {"id": 1, "subject": "Task 2: Enhance /budget/health with DB connectivity check", "status": "pending", "blockedBy": [0]},
-    {"id": 2, "subject": "Task 3: Commit and create PR", "status": "pending", "blockedBy": [1]}
-  ],
-  "lastUpdated": "2026-03-19T00:00:00Z"
-}
