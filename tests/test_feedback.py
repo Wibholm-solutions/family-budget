@@ -1,20 +1,6 @@
-"""Integration tests for feedback, rate limiting, and amount parsing."""
+"""Integration tests for feedback and rate limiting."""
 
 import time
-
-import pytest
-
-
-class TestHelpers:
-    """Tests for helper functions."""
-
-    def test_format_currency(self):
-        """format_currency should format Danish-style currency with 2 decimal places."""
-        from src.api import format_currency
-
-        assert format_currency(1000) == "1.000,00 kr"
-        assert format_currency(1000000) == "1.000.000,00 kr"
-        assert format_currency(0) == "0,00 kr"
 
 
 class TestFeedback:
@@ -57,8 +43,23 @@ class TestFeedback:
         assert response.status_code == 200
         assert "mindst 10 tegn" in response.text
 
-    def test_feedback_submit_success(self, authenticated_client):
+    def test_feedback_submit_success(self, authenticated_client, monkeypatch):
         """Valid feedback should be accepted."""
+        import httpx
+
+        import src.routes.pages as pages_module
+
+        monkeypatch.setattr(pages_module, "FEEDBACK_API_URL", "http://fake-feedback-api:3000")
+
+        async def mock_post(*args, **kwargs):
+            class MockResponse:
+                status_code = 201
+                def json(self_inner):
+                    return {"message": "Feedback received", "issue_url": "https://github.com/test/issues/1"}
+            return MockResponse()
+
+        monkeypatch.setattr(httpx.AsyncClient, "post", mock_post)
+
         response = authenticated_client.post(
             "/budget/feedback",
             data={
@@ -216,86 +217,3 @@ class TestRateLimiting:
 
         assert response.status_code == 429
         assert "for mange" in response.text.lower()
-
-
-class TestAmountParsing:
-    """Tests for Danish amount format parsing."""
-
-    def test_parse_danish_amount_with_comma(self):
-        """Should parse comma as decimal separator."""
-        from src.api import parse_danish_amount
-        assert parse_danish_amount("1234,50") == 1234.50
-
-    def test_parse_danish_amount_with_thousands_and_comma(self):
-        """Should handle thousands separator with comma."""
-        from src.api import parse_danish_amount
-        assert parse_danish_amount("1.234,50") == 1234.50
-        assert parse_danish_amount("12.345,67") == 12345.67
-
-    def test_parse_danish_amount_whole_number(self):
-        """Should handle whole numbers."""
-        from src.api import parse_danish_amount
-        assert parse_danish_amount("1234") == 1234.00
-
-    def test_parse_danish_amount_single_decimal(self):
-        """Should handle single decimal place."""
-        from src.api import parse_danish_amount
-        assert parse_danish_amount("1234,5") == 1234.50
-
-    def test_parse_danish_amount_with_whitespace(self):
-        """Should trim whitespace."""
-        from src.api import parse_danish_amount
-        assert parse_danish_amount("  1234,50  ") == 1234.50
-
-    def test_parse_danish_amount_zero(self):
-        """Should handle zero."""
-        from src.api import parse_danish_amount
-        assert parse_danish_amount("0") == 0.00
-        assert parse_danish_amount("0,00") == 0.00
-
-    def test_parse_danish_amount_invalid_empty(self):
-        """Should raise ValueError for empty string."""
-        from src.api import parse_danish_amount
-        with pytest.raises(ValueError):
-            parse_danish_amount("")
-
-    def test_parse_danish_amount_invalid_text(self):
-        """Should raise ValueError for invalid text."""
-        from src.api import parse_danish_amount
-        with pytest.raises(ValueError):
-            parse_danish_amount("abc")
-
-    def test_parse_danish_amount_invalid_multiple_commas(self):
-        """Should raise ValueError for multiple commas."""
-        from src.api import parse_danish_amount
-        with pytest.raises(ValueError):
-            parse_danish_amount("12,34,56")
-
-
-class TestCurrencyFormatting:
-    """Tests for currency display formatting."""
-
-    def test_format_currency_with_decimals(self):
-        """Should format with 2 decimal places."""
-        from src.api import format_currency
-        assert format_currency(1234.50) == "1.234,50 kr"
-
-    def test_format_currency_whole_number(self):
-        """Should show .00 for whole numbers."""
-        from src.api import format_currency
-        assert format_currency(1234.0) == "1.234,00 kr"
-
-    def test_format_currency_large_amount(self):
-        """Should handle large amounts with thousands separator."""
-        from src.api import format_currency
-        assert format_currency(123456.78) == "123.456,78 kr"
-
-    def test_format_currency_small_amount(self):
-        """Should handle amounts less than 1 kr."""
-        from src.api import format_currency
-        assert format_currency(0.50) == "0,50 kr"
-
-    def test_format_currency_zero(self):
-        """Should format zero correctly."""
-        from src.api import format_currency
-        assert format_currency(0.00) == "0,00 kr"

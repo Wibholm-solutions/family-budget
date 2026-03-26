@@ -1,5 +1,7 @@
 """Public API endpoints for Family Budget."""
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
@@ -8,6 +10,12 @@ from ..db.facade import DataContext
 from ..dependencies import get_data
 
 router = APIRouter(prefix="/budget")
+
+DANISH_MONTHS = {
+    1: "januar", 2: "februar", 3: "marts", 4: "april",
+    5: "maj", 6: "juni", 7: "juli", 8: "august",
+    9: "september", 10: "oktober", 11: "november", 12: "december",
+}
 
 
 @router.get("/health")
@@ -68,4 +76,52 @@ async def chart_data(request: Request, ctx: DataContext = Depends(get_data)):
         "total_income": total_income,
         "total_expenses": total_expenses,
         "top_expenses": top_expenses
+    }
+
+
+@router.get("/api/export-data")
+async def export_data(request: Request, ctx: DataContext = Depends(get_data)):
+    """API endpoint for budget export (image/CSV).
+
+    Returns all budget data as JSON. All amounts are monthly equivalents.
+    Auth required — returns only the authenticated user's data.
+    """
+    now = datetime.now()
+    date_label = f"{DANISH_MONTHS[now.month]} {now.year}"
+
+    total_income = ctx.total_income()
+    total_expenses = ctx.total_expenses()
+
+    # Incomes with person and monthly amount
+    incomes = [
+        {"person": inc.person, "amount": inc.monthly_amount, "frequency": inc.frequency}
+        for inc in ctx.income()
+    ]
+
+    # Category totals with icons
+    categories = {cat.name: cat.icon for cat in ctx.categories()}
+    raw_totals = ctx.category_totals()
+    category_totals = {
+        name: {"total": total, "icon": categories.get(name, "tag")}
+        for name, total in raw_totals.items()
+    }
+
+    # Expenses by category with individual items
+    expenses_by_cat = ctx.expenses_by_category()
+    expenses_by_category = {
+        cat_name: [
+            {"name": exp.name, "amount": exp.monthly_amount, "account": exp.account}
+            for exp in exps
+        ]
+        for cat_name, exps in expenses_by_cat.items()
+    }
+
+    return {
+        "date_label": date_label,
+        "total_income": total_income,
+        "total_expenses": total_expenses,
+        "remaining": round(total_income - total_expenses, 2),
+        "incomes": incomes,
+        "category_totals": category_totals,
+        "expenses_by_category": expenses_by_category,
     }
