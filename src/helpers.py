@@ -10,8 +10,6 @@ from dotenv import load_dotenv
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
-from . import __version__
-
 # Load environment
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -139,7 +137,6 @@ def format_currency_short(amount: float) -> str:
 # Add to Jinja2 globals
 templates.env.globals["format_currency"] = format_currency
 templates.env.globals["format_currency_short"] = format_currency_short
-templates.env.globals["app_version"] = __version__
 
 
 # =============================================================================
