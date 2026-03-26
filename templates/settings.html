@@ -192,6 +192,16 @@ async function exportBudgetImage(level) {
             lucide.createIcons({ nodes: [exportDiv] });
         }
 
+        // Reset off-screen positioning before capture — html-to-image
+        // clones into an SVG foreignObject where position:fixed with
+        // left:-9999px pushes content outside the viewport, producing
+        // a blank image. Switching to static flow gives the clone
+        // correct layout. The element is momentarily in-flow but
+        // removed immediately after capture.
+        exportDiv.style.position = '';
+        exportDiv.style.left = '';
+        exportDiv.style.top = '';
+
         const blob = await htmlToImage.toBlob(exportDiv, {
             backgroundColor: document.documentElement.classList.contains('dark')
                 ? '#111827' : '#ffffff',
