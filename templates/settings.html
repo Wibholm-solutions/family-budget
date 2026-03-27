@@ -348,39 +348,35 @@ async function renderExportChart(exportDiv, categoryTotals) {
     const entries = Object.entries(categoryTotals);
     if (entries.length === 0) return;
 
+    // Render the chart on a canvas placed directly inside the export div.
+    // html-to-image handles <canvas> natively (calls toDataURL internally),
+    // which is more reliable than an intermediate data-URL <img>.
+    const container = exportDiv.querySelector('#export-chart-img');
     const canvas = document.createElement('canvas');
     canvas.width = 300;
     canvas.height = 300;
-    canvas.style.cssText = 'position:fixed;left:-9999px;';
-    document.body.appendChild(canvas);
+    canvas.style.cssText = 'width:200px;height:200px;margin:0 auto;display:block;';
+    container.appendChild(canvas);
 
-    try {
-        const chart = new Chart(canvas, {
-            type: 'doughnut',
-            data: {
-                labels: entries.map(([name]) => name),
-                datasets: [{
-                    data: entries.map(([, info]) => info.total),
-                    backgroundColor: entries.map((_, i) => EXPORT_COLORS[i % EXPORT_COLORS.length]),
-                    borderWidth: 0,
-                }],
-            },
-            options: {
-                animation: false,
-                responsive: false,
-                cutout: '60%',
-                plugins: { legend: { display: false } },
-            },
-        });
+    const chart = new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: entries.map(([name]) => name),
+            datasets: [{
+                data: entries.map(([, info]) => info.total),
+                backgroundColor: entries.map((_, i) => EXPORT_COLORS[i % EXPORT_COLORS.length]),
+                borderWidth: 0,
+            }],
+        },
+        options: {
+            animation: false,
+            responsive: false,
+            cutout: '60%',
+            plugins: { legend: { display: false } },
+        },
+    });
 
-        const imgSrc = canvas.toDataURL('image/png');
-        exportDiv.querySelector('#export-chart-img').innerHTML =
-            `<img src="${imgSrc}" style="width:200px;height:200px;margin:0 auto;" />`;
-
-        chart.destroy();
-    } finally {
-        document.body.removeChild(canvas);
-    }
+    chart.destroy();
 }
 </script>
 {% endblock %}
