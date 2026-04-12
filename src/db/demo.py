@@ -8,10 +8,10 @@ from .budget_store import _calculate_yearly_overview
 
 # Demo data - typical Danish household budget
 DEMO_INCOME = [
-    # (person, amount, frequency, months)
-    ("Person 1", 28000, "monthly", None),
-    ("Person 2", 22000, "monthly", None),
-    ("Bonus", 30000, "semi-annual", [6, 12]),
+    # (person, source, amount, frequency, months)
+    ("Person 1", "Løn", 28000, "monthly", None),
+    ("Person 2", "Løn", 22000, "monthly", None),
+    ("Bonus", "Bonus", 30000, "semi-annual", [6, 12]),
 ]
 
 DEMO_EXPENSES = [
@@ -41,10 +41,11 @@ DEMO_EXPENSES = [
 ]
 
 DEMO_INCOME_ADVANCED = [
-    ("Person 1", 28000, "monthly", None),
-    ("Person 2", 22000, "monthly", None),
-    ("Bonus", 30000, "semi-annual", [6, 12]),
-    ("Børnepenge", 6264, "quarterly", [1, 4, 7, 10]),
+    # (person, source, amount, frequency, months)
+    ("Person 1", "Løn", 28000, "monthly", None),
+    ("Person 2", "Løn", 22000, "monthly", None),
+    ("Bonus", "Bonus", 30000, "semi-annual", [6, 12]),
+    ("Person 1", "Børnepenge", 6264, "quarterly", [1, 4, 7, 10]),
 ]
 
 DEMO_EXPENSES_ADVANCED = [
@@ -75,9 +76,9 @@ DEMO_EXPENSES_ADVANCED = [
 
 
 def get_demo_income(advanced: bool = False) -> list[Income]:
-    source = DEMO_INCOME_ADVANCED if advanced else DEMO_INCOME
-    return [Income(id=i+1, user_id=0, person=person, amount=amount, frequency=freq, months=months)
-            for i, (person, amount, freq, months) in enumerate(source)]
+    data = DEMO_INCOME_ADVANCED if advanced else DEMO_INCOME
+    return [Income(id=i+1, user_id=0, person=person, amount=amount, source=src, frequency=freq, months=months)
+            for i, (person, src, amount, freq, months) in enumerate(data)]
 
 
 def get_demo_total_income(advanced: bool = False) -> float:

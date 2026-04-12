@@ -24,10 +24,23 @@ router = APIRouter(prefix="/budget")
 async def income_page(request: Request, ctx: DataContext = Depends(get_data)):
     """Income edit page."""
     incomes = ctx.income()
+    split_enabled = ctx.split_enabled()
+    split_percentages = ctx.split_percentages()
+
+    # Get unique persons for split display
+    persons = list(dict.fromkeys(inc.person for inc in incomes))
 
     return templates.TemplateResponse(
         "income.html",
-        {"request": request, "incomes": incomes, "demo_mode": ctx.demo, "demo_advanced": ctx.advanced}
+        {
+            "request": request,
+            "incomes": incomes,
+            "demo_mode": ctx.demo,
+            "demo_advanced": ctx.advanced,
+            "split_enabled": split_enabled,
+            "split_percentages": split_percentages,
+            "persons": persons,
+        }
     )
 
 
@@ -38,23 +51,45 @@ async def update_income(request: Request, _: None = Depends(require_write("/budg
     form = await request.form()
 
     try:
-        # Parse dynamic form fields: income_name_0, income_amount_0, income_frequency_0, etc.
+        # Handle split toggle
+        split_enabled = form.get("split_enabled") == "on"
+        db.set_split_enabled(user_id, split_enabled)
+
+        # Parse dynamic form fields
         incomes_to_save = []
         i = 0
         while f"income_name_{i}" in form:
             name = form.get(f"income_name_{i}", "").strip()
+            source = form.get(f"income_source_{i}", "Løn").strip() or "Løn"
             amount_str = form.get(f"income_amount_{i}", "0")
             frequency = form.get(f"income_frequency_{i}", "monthly")
-            if name:  # Only save if name is provided
+            if name:
                 result = validate_income(name, amount_str if amount_str else "0", frequency)
                 result.raise_if_invalid()
-                incomes_to_save.append((result.parsed["name"], result.parsed["amount"], result.parsed["frequency"]))
+                incomes_to_save.append((result.parsed["name"], source, result.parsed["amount"], result.parsed["frequency"]))
             i += 1
 
         # Clear existing and save new
         db.delete_all_income(user_id)
-        for name, amount, frequency in incomes_to_save:
-            db.add_income(user_id, name, amount, frequency)
+        for name, source, amount, frequency in incomes_to_save:
+            db.add_income(user_id, name, amount, frequency, source)
+
+        # Handle split overrides if enabled
+        if split_enabled:
+            persons = list(dict.fromkeys(name for name, _, _, _ in incomes_to_save))
+            db.clear_split_overrides(user_id)
+            has_overrides = False
+            for person in persons:
+                override_str = form.get(f"split_pct_{person}")
+                if override_str:
+                    try:
+                        pct = float(override_str.replace(",", "."))
+                        db.set_split_override(user_id, person, pct)
+                        has_overrides = True
+                    except ValueError:
+                        pass
+            if not has_overrides:
+                db.clear_split_overrides(user_id)
 
     except (ValueError, sqlite3.Error) as e:
         logger.error(f"Error updating income: {e}")

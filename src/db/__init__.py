@@ -65,6 +65,7 @@ from .models import (
     Category,
     Expense,
     Income,
+    IncomeSplit,
     PasswordResetToken,
     User,
 )
@@ -79,6 +80,20 @@ from .operations import (
     rename_category_and_cascade_expenses,
 )
 from .schema import DEFAULT_CATEGORIES, init_db
+from .split_store import (
+    AccountTransfer,
+    PersonTransfer,
+    TransferPlan,
+    clear_split_overrides,
+    get_income_by_person,
+    get_split_overrides,
+    get_split_percentages,
+    get_transfer_plan,
+    get_unassigned_expenses,
+    is_split_enabled,
+    set_split_enabled,
+    set_split_override,
+)
 from .security import (
     PBKDF2_ITERATIONS,
     hash_email,
@@ -117,8 +132,22 @@ __all__ = [
     "Expense",
     # models
     "Income",
+    "IncomeSplit",
     "PasswordResetToken",
     "User",
+    # split_store
+    "AccountTransfer",
+    "PersonTransfer",
+    "TransferPlan",
+    "clear_split_overrides",
+    "get_income_by_person",
+    "get_split_overrides",
+    "get_split_percentages",
+    "get_transfer_plan",
+    "get_unassigned_expenses",
+    "is_split_enabled",
+    "set_split_enabled",
+    "set_split_override",
     # budget_store
     "_calculate_yearly_overview",
     "add_account",
