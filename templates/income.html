@@ -34,6 +34,54 @@
     </div>
     {% endif %}
 
+    <!-- Income Split Toggle -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
+        <label class="flex items-center justify-between cursor-pointer">
+            <div>
+                <span class="font-medium text-gray-900 dark:text-white">Indkomstfordeling</span>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Beregn overførsler per person til konti</p>
+            </div>
+            <div class="relative">
+                <input type="checkbox" name="split_enabled" id="split-toggle" class="sr-only peer"
+                    {% if split_enabled %}checked{% endif %}
+                    onchange="toggleSplitSection()"
+                    form="income-form">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </div>
+        </label>
+    </div>
+
+    <!-- Split Percentages (visible when toggle is on) -->
+    <div id="split-section" class="{% if not split_enabled %}hidden{% endif %} bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
+        <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">Fordelingsnøgle</h3>
+        <div id="split-controls" class="space-y-3">
+            {% for person in persons %}
+            <div class="split-person" data-person="{{ person }}">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ person }}</span>
+                    <div class="flex items-center gap-2">
+                        <input type="number" name="split_pct_{{ person }}"
+                            value="{{ split_percentages.get(person, 0)|round(0)|int }}"
+                            min="0" max="100" step="1"
+                            class="w-16 text-right text-sm px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            oninput="onSplitInputChange(this)"
+                            form="income-form">
+                        <span class="text-sm text-gray-500">%</span>
+                    </div>
+                </div>
+                <input type="range" min="0" max="100" step="1"
+                    value="{{ split_percentages.get(person, 0)|round(0)|int }}"
+                    class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 accent-primary"
+                    oninput="onSplitSliderChange(this)">
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-2 flex justify-between items-center">
+            <span id="split-total" class="text-xs text-gray-500 dark:text-gray-400">Total: {% if persons %}{{ split_percentages.values()|sum|round(0)|int }}{% else %}0{% endif %}%</span>
+            <button type="button" onclick="resetSplit()" class="text-xs text-primary hover:text-blue-600">Nulstil</button>
+        </div>
+    </div>
+
     <form method="post" action="/budget/income" class="space-y-4" id="income-form">
         <!-- Dynamisk liste af indtægtskilder -->
         <div id="income-list" class="space-y-4">
@@ -60,6 +108,16 @@
                         <i data-lucide="trash-2" class="w-5 h-5"></i>
                     </button>
                 </div>
+                <label class="block mb-3">
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">Kilde</span>
+                    <input
+                        type="text"
+                        name="income_source_{{ loop.index0 }}"
+                        value="{{ income.source if income.source else 'Løn' }}"
+                        placeholder="F.eks. Løn, Børnepenge"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    >
+                </label>
                 <div class="grid grid-cols-2 gap-3 mb-3">
                     <label class="block">
                         <span class="text-gray-500 dark:text-gray-400 text-sm">Beløb</span>
@@ -157,6 +215,16 @@
                         <i data-lucide="trash-2" class="w-5 h-5"></i>
                     </button>
                 </div>
+                <label class="block mb-3">
+                    <span class="text-gray-500 dark:text-gray-400 text-sm">Kilde</span>
+                    <input
+                        type="text"
+                        name="income_source_${incomeIndex}"
+                        value="Løn"
+                        placeholder="F.eks. Løn, Børnepenge"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    >
+                </label>
                 <div class="grid grid-cols-2 gap-3 mb-3">
                     <label class="block">
                         <span class="text-gray-500 dark:text-gray-400 text-sm">Beløb</span>
@@ -226,10 +294,80 @@
     function reindexIncomes() {
         document.querySelectorAll('.income-item').forEach((item, i) => {
             item.querySelector('[name^="income_name_"]').name = `income_name_${i}`;
+            item.querySelector('[name^="income_source_"]').name = `income_source_${i}`;
             item.querySelector('[name^="income_amount_"]').name = `income_amount_${i}`;
             item.querySelector('[name^="income_frequency_"]').name = `income_frequency_${i}`;
         });
         incomeIndex = document.querySelectorAll('.income-item').length;
+    }
+    function toggleSplitSection() {
+        const section = document.getElementById('split-section');
+        const toggle = document.getElementById('split-toggle');
+        section.classList.toggle('hidden', !toggle.checked);
+    }
+
+    function onSplitSliderChange(slider) {
+        const personDiv = slider.closest('.split-person');
+        const input = personDiv.querySelector('input[type="number"]');
+        input.value = slider.value;
+        balanceSplit(personDiv);
+    }
+
+    function onSplitInputChange(input) {
+        const personDiv = input.closest('.split-person');
+        const slider = personDiv.querySelector('input[type="range"]');
+        slider.value = input.value;
+        balanceSplit(personDiv);
+    }
+
+    function balanceSplit(changedDiv) {
+        const allDivs = document.querySelectorAll('.split-person');
+        if (allDivs.length < 2) return;
+
+        const changedInput = changedDiv.querySelector('input[type="number"]');
+        const changedValue = parseFloat(changedInput.value) || 0;
+
+        if (allDivs.length === 2) {
+            allDivs.forEach(div => {
+                if (div !== changedDiv) {
+                    const input = div.querySelector('input[type="number"]');
+                    const slider = div.querySelector('input[type="range"]');
+                    const other = Math.max(0, Math.min(100, 100 - changedValue));
+                    input.value = other;
+                    slider.value = other;
+                }
+            });
+        } else {
+            const others = Array.from(allDivs).filter(d => d !== changedDiv);
+            const otherTotal = others.reduce((sum, d) => {
+                return sum + (parseFloat(d.querySelector('input[type="number"]').value) || 0);
+            }, 0);
+            const remaining = Math.max(0, 100 - changedValue);
+
+            others.forEach(div => {
+                const input = div.querySelector('input[type="number"]');
+                const slider = div.querySelector('input[type="range"]');
+                const currentVal = parseFloat(input.value) || 0;
+                const ratio = otherTotal > 0 ? currentVal / otherTotal : 1 / others.length;
+                const newVal = Math.round(remaining * ratio);
+                input.value = newVal;
+                slider.value = newVal;
+            });
+        }
+        updateSplitTotal();
+    }
+
+    function updateSplitTotal() {
+        const inputs = document.querySelectorAll('.split-person input[type="number"]');
+        const total = Array.from(inputs).reduce((sum, inp) => sum + (parseFloat(inp.value) || 0), 0);
+        const el = document.getElementById('split-total');
+        if (el) el.textContent = `Total: ${total}%`;
+    }
+
+    function resetSplit() {
+        document.querySelectorAll('.split-person input[type="number"]').forEach(inp => inp.value = '');
+        document.querySelectorAll('.split-person input[type="range"]').forEach(inp => inp.value = 0);
+        updateSplitTotal();
     }
     </script>
 

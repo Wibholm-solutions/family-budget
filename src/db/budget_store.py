@@ -48,27 +48,27 @@ def get_all_income(user_id: int) -> list[Income]:
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute(
-            "SELECT id, user_id, person, amount, frequency FROM income WHERE user_id = ? ORDER BY person",
+            "SELECT id, user_id, person, source, amount, frequency FROM income WHERE user_id = ? ORDER BY person, source",
             (user_id,)
         )
         rows = cur.fetchall()
     return [Income(**dict(row)) for row in rows]
 
 
-def add_income(user_id: int, person: str, amount: float, frequency: str = 'monthly') -> int:
+def add_income(user_id: int, person: str, amount: float, frequency: str = 'monthly', source: str = 'Løn') -> int:
     """Add income entry for a user. Returns the new income ID."""
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO income (user_id, person, amount, frequency) VALUES (?, ?, ?, ?)",
-            (user_id, person, amount, frequency)
+            "INSERT INTO income (user_id, person, source, amount, frequency) VALUES (?, ?, ?, ?, ?)",
+            (user_id, person, source, amount, frequency)
         )
         income_id = cur.lastrowid
         conn.commit()
     return income_id
 
 
-def update_income(user_id: int, person: str, amount: float, frequency: str = 'monthly'):
+def update_income(user_id: int, person: str, amount: float, frequency: str = 'monthly', source: str = 'Løn'):
     """Update or insert income for a user.
 
     Uses INSERT ... ON CONFLICT for atomic upsert operation,
@@ -77,10 +77,10 @@ def update_income(user_id: int, person: str, amount: float, frequency: str = 'mo
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute(
-            """INSERT INTO income (user_id, person, amount, frequency)
-               VALUES (?, ?, ?, ?)
-               ON CONFLICT(user_id, person) DO UPDATE SET amount = excluded.amount, frequency = excluded.frequency""",
-            (user_id, person, amount, frequency)
+            """INSERT INTO income (user_id, person, source, amount, frequency)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(user_id, person, source) DO UPDATE SET amount = excluded.amount, frequency = excluded.frequency""",
+            (user_id, person, source, amount, frequency)
         )
         conn.commit()
 

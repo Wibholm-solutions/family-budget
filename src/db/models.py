@@ -36,8 +36,16 @@ class Income(MonthlyMixin):
     user_id: int
     person: str
     amount: float
+    source: str = 'Løn'
     frequency: str = 'monthly'
     months: list[int] | None = None
+
+
+@dataclass
+class IncomeSplit:
+    user_id: int
+    person: str
+    percentage_override: float | None  # None = calculate from income
 
 
 @dataclass

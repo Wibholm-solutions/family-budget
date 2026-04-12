@@ -30,6 +30,9 @@ async def dashboard(request: Request, ctx: DataContext = Depends(get_data)):
         for cat, total in category_totals.items():
             category_percentages[cat] = (total / total_expenses) * 100
 
+    # Income distribution
+    transfer_plan = ctx.transfer_plan()
+
     return templates.TemplateResponse(
         "dashboard.html",
         {
@@ -45,5 +48,6 @@ async def dashboard(request: Request, ctx: DataContext = Depends(get_data)):
             "yearly_overview": yearly_overview,
             "demo_mode": ctx.demo,
             "demo_advanced": ctx.advanced,
+            "transfer_plan": transfer_plan,
         }
     )

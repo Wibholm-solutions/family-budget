@@ -34,12 +34,24 @@ def _create_tables(cur) -> None:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             person TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT 'Løn',
             amount REAL NOT NULL DEFAULT 0,
             frequency TEXT NOT NULL DEFAULT 'monthly' CHECK(frequency IN ('monthly', 'quarterly', 'semi-annual', 'yearly')),
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE(user_id, person, source)
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS income_split (
+            user_id INTEGER NOT NULL,
+            person TEXT NOT NULL,
+            percentage_override REAL,
             FOREIGN KEY (user_id) REFERENCES users(id),
             UNIQUE(user_id, person)
         )
     """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_income_split_user ON income_split(user_id)")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS categories (
@@ -90,6 +102,38 @@ def _create_tables(cur) -> None:
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
     """)
+
+
+    # Migrations for existing databases
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN income_split_enabled BOOLEAN NOT NULL DEFAULT 0")
+    except Exception:
+        pass  # Column already exists
+
+    try:
+        cur.execute("ALTER TABLE income ADD COLUMN source TEXT NOT NULL DEFAULT 'Løn'")
+    except Exception:
+        pass  # Column already exists
+
+    # Migrate income UNIQUE constraint: (user_id, person) -> (user_id, person, source)
+    cur.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='income'")
+    row = cur.fetchone()
+    if row and 'UNIQUE(user_id, person)' in row[0] and 'UNIQUE(user_id, person, source)' not in row[0]:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS income_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                person TEXT NOT NULL,
+                source TEXT NOT NULL DEFAULT 'Løn',
+                amount REAL NOT NULL DEFAULT 0,
+                frequency TEXT NOT NULL DEFAULT 'monthly' CHECK(frequency IN ('monthly', 'quarterly', 'semi-annual', 'yearly')),
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                UNIQUE(user_id, person, source)
+            )
+        """)
+        cur.execute("INSERT INTO income_new (id, user_id, person, source, amount, frequency) SELECT id, user_id, person, 'Løn', amount, frequency FROM income")
+        cur.execute("DROP TABLE income")
+        cur.execute("ALTER TABLE income_new RENAME TO income")
 
 
 def _seed_default_categories(cur) -> None:
