@@ -46,10 +46,9 @@ async def expenses_page(request: Request, ctx: DataContext = Depends(get_data)):
     category_usage = ctx.category_usage()
     accounts = ctx.accounts()
 
-    return templates.TemplateResponse(
+    return templates.TemplateResponse(request,
         "expenses.html",
         {
-            "request": request,
             "expenses": expenses,
             "expenses_by_category": expenses_by_category,
             "category_totals": category_totals,

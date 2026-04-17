@@ -26,10 +26,9 @@ async def categories_page(request: Request, ctx: DataContext = Depends(get_data)
     categories = ctx.categories()
     category_usage = ctx.category_usage()
 
-    return templates.TemplateResponse(
+    return templates.TemplateResponse(request,
         "categories.html",
         {
-            "request": request,
             "categories": categories,
             "category_usage": category_usage,
             "demo_mode": ctx.demo,

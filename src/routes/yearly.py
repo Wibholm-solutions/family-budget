@@ -15,8 +15,7 @@ async def yearly_overview_page(request: Request, ctx: DataContext = Depends(get_
     """Yearly overview page with monthly expense breakdown."""
     overview = ctx.yearly_overview()
 
-    return templates.TemplateResponse("yearly.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "yearly.html", {
         "overview": overview,
         "demo_mode": ctx.demo,
     })

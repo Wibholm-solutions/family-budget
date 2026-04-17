@@ -25,9 +25,9 @@ async def income_page(request: Request, ctx: DataContext = Depends(get_data)):
     """Income edit page."""
     incomes = ctx.income()
 
-    return templates.TemplateResponse(
+    return templates.TemplateResponse(request,
         "income.html",
-        {"request": request, "incomes": incomes, "demo_mode": ctx.demo, "demo_advanced": ctx.advanced}
+        {"incomes": incomes, "demo_mode": ctx.demo, "demo_advanced": ctx.advanced}
     )
 
 

@@ -19,10 +19,9 @@ async def settings_page(request: Request, _: None = Depends(require_write("/budg
     user_id = get_user_id(request)
     user = db.get_user_by_id(user_id)
 
-    return templates.TemplateResponse(
+    return templates.TemplateResponse(request,
         "settings.html",
         {
-            "request": request,
             "username": user.username if user else "Ukendt",
             "has_email": user.has_email() if user else False
         }
@@ -47,10 +46,9 @@ async def update_email(  # noqa: PLR0911
     # If clearing email
     if not email:
         db.update_user_email(user_id, None)
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "settings.html",
             {
-                "request": request,
                 "username": user.username if user else "Ukendt",
                 "has_email": False,
                 "success": "Email fjernet"
@@ -59,10 +57,9 @@ async def update_email(  # noqa: PLR0911
 
     # Validate email format
     if "@" not in email:
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "settings.html",
             {
-                "request": request,
                 "username": user.username if user else "Ukendt",
                 "has_email": user.has_email() if user else False,
                 "error": "Ugyldig email-adresse"
@@ -72,10 +69,9 @@ async def update_email(  # noqa: PLR0911
     # Save email hash
     db.update_user_email(user_id, email)
 
-    return templates.TemplateResponse(
+    return templates.TemplateResponse(request,
         "settings.html",
         {
-            "request": request,
             "username": user.username if user else "Ukendt",
             "has_email": True,
             "success": "Email tilføjet"

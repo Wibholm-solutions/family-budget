@@ -32,10 +32,9 @@ async def about_page(request: Request):
     """About page with user guide and self-hosting info."""
     logged_in = check_auth(request)
     demo_mode = is_demo_mode(request)
-    return templates.TemplateResponse(
+    return templates.TemplateResponse(request,
         "om.html",
         {
-            "request": request,
             "demo_mode": demo_mode,
             "demo_advanced": is_demo_advanced(request),
             "show_nav": logged_in or demo_mode,
@@ -57,9 +56,9 @@ async def help_redirect(request: Request):
 @router.get("/privacy", response_class=HTMLResponse)
 async def privacy_page(request: Request):
     """Privacy policy page - accessible without login."""
-    return templates.TemplateResponse(
+    return templates.TemplateResponse(request,
         "privacy.html",
-        {"request": request, "show_nav": False}
+        {"show_nav": False}
     )
 
 
@@ -96,9 +95,9 @@ def record_feedback_attempt(client_ip: str):
 @router.get("/feedback", response_class=HTMLResponse)
 async def feedback_page(request: Request, _: None = Depends(require_auth)):
     """Feedback submission page."""
-    return templates.TemplateResponse(
+    return templates.TemplateResponse(request,
         "feedback.html",
-        {"request": request, "demo_mode": is_demo_mode(request), "demo_advanced": is_demo_advanced(request)}
+        {"demo_mode": is_demo_mode(request), "demo_advanced": is_demo_advanced(request)}
     )
 
 
@@ -119,17 +118,16 @@ async def submit_feedback(  # noqa: PLR0911, PLR0912
     if website:
         logger.warning(f"Honeypot triggered from {client_ip}")
         # Pretend success to fool bots
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "feedback.html",
-            {"request": request, "success": True, "demo_mode": demo, "demo_advanced": is_demo_advanced(request)}
+            {"success": True, "demo_mode": demo, "demo_advanced": is_demo_advanced(request)}
         )
 
     # Rate limiting
     if not check_feedback_rate_limit(client_ip):
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "feedback.html",
             {
-                "request": request,
                 "error": "For mange henvendelser. Prøv igen senere.",
                 "demo_mode": demo,
                 "demo_advanced": is_demo_advanced(request),
@@ -138,10 +136,9 @@ async def submit_feedback(  # noqa: PLR0911, PLR0912
 
     # Validate input
     if len(description.strip()) < 10:
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "feedback.html",
             {
-                "request": request,
                 "error": "Beskrivelsen skal være mindst 10 tegn.",
                 "demo_mode": demo,
                 "demo_advanced": is_demo_advanced(request),
@@ -181,10 +178,9 @@ async def submit_feedback(  # noqa: PLR0911, PLR0912
                     raise Exception("feedback-api error")
         except Exception as e:
             logger.error(f"Failed to send feedback: {e}")
-            return templates.TemplateResponse(
+            return templates.TemplateResponse(request,
                 "feedback.html",
                 {
-                    "request": request,
                     "error": "Kunne ikke sende feedback. Prøv igen senere.",
                     "demo_mode": demo,
                     "demo_advanced": is_demo_advanced(request),
@@ -196,7 +192,7 @@ async def submit_feedback(  # noqa: PLR0911, PLR0912
 
     record_feedback_attempt(client_ip)
 
-    return templates.TemplateResponse(
+    return templates.TemplateResponse(request,
         "feedback.html",
-        {"request": request, "success": True, "demo_mode": demo, "demo_advanced": is_demo_advanced(request)}
+        {"success": True, "demo_mode": demo, "demo_advanced": is_demo_advanced(request)}
     )
