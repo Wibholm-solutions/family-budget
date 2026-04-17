@@ -98,7 +98,7 @@ async def forgot_password_page(request: Request):
     """Show forgot password page."""
     if get_user_id(request) is not None:
         return RedirectResponse(url="/budget/", status_code=303)
-    return templates.TemplateResponse("forgot-password.html", {"request": request})
+    return templates.TemplateResponse(request, "forgot-password.html")
 
 
 @router.post("/forgot-password")
@@ -128,9 +128,9 @@ async def forgot_password(request: Request, email: str = Form(...)):
         # Send email
         send_password_reset_email(email, reset_url)
 
-    return templates.TemplateResponse(
+    return templates.TemplateResponse(request,
         "forgot-password.html",
-        {"request": request, "success": success_message}
+        {"success": success_message}
     )
 
 
@@ -142,14 +142,14 @@ async def reset_password_page(request: Request, token: str):
     reset_token = db.get_valid_reset_token(token_hash)
 
     if not reset_token:
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "reset-password.html",
-            {"request": request, "invalid_token": "Dette link er ugyldigt eller udløbet. Anmod om et nyt link."}
+            {"invalid_token": "Dette link er ugyldigt eller udløbet. Anmod om et nyt link."}
         )
 
-    return templates.TemplateResponse(
+    return templates.TemplateResponse(request,
         "reset-password.html",
-        {"request": request, "token": token}
+        {"token": token}
     )
 
 
@@ -166,22 +166,22 @@ async def reset_password(
     reset_token = db.get_valid_reset_token(token_hash)
 
     if not reset_token:
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "reset-password.html",
-            {"request": request, "invalid_token": "Dette link er ugyldigt eller udløbet. Anmod om et nyt link."}
+            {"invalid_token": "Dette link er ugyldigt eller udløbet. Anmod om et nyt link."}
         )
 
     # Validate password
     if len(password) < 6:
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "reset-password.html",
-            {"request": request, "token": token, "error": "Adgangskoden skal være mindst 6 tegn"}
+            {"token": token, "error": "Adgangskoden skal være mindst 6 tegn"}
         )
 
     if password != password_confirm:
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "reset-password.html",
-            {"request": request, "token": token, "error": "Adgangskoderne matcher ikke"}
+            {"token": token, "error": "Adgangskoderne matcher ikke"}
         )
 
     # Update password
@@ -190,7 +190,7 @@ async def reset_password(
     # Mark token as used
     db.mark_reset_token_used(reset_token.id)
 
-    return templates.TemplateResponse(
+    return templates.TemplateResponse(request,
         "reset-password.html",
-        {"request": request, "success": "Din adgangskode er blevet nulstillet. Du kan nu logge ind."}
+        {"success": "Din adgangskode er blevet nulstillet. Du kan nu logge ind."}
     )

@@ -31,7 +31,7 @@ async def login_page(request: Request):
     """Show login page."""
     if get_user_id(request) is not None:
         return RedirectResponse(url="/budget/", status_code=303)
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request, "login.html")
 
 
 @router.post("/login")
@@ -60,9 +60,9 @@ async def login(
         )
         return response
     else:
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "login.html",
-            {"request": request, "error": "Forkert brugernavn eller adgangskode"}
+            {"error": "Forkert brugernavn eller adgangskode"}
         )
 
 
@@ -71,7 +71,7 @@ async def register_page(request: Request):
     """Show registration page."""
     if get_user_id(request) is not None:
         return RedirectResponse(url="/budget/", status_code=303)
-    return templates.TemplateResponse("register.html", {"request": request})
+    return templates.TemplateResponse(request, "register.html")
 
 
 @router.post("/register")
@@ -84,29 +84,29 @@ async def register(  # noqa: PLR0911
     """Register a new user."""
     # Validate input
     if len(username) < MIN_USERNAME_LENGTH:
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "register.html",
-            {"request": request, "error": f"Brugernavn skal være mindst {MIN_USERNAME_LENGTH} tegn"}
+            {"error": f"Brugernavn skal være mindst {MIN_USERNAME_LENGTH} tegn"}
         )
 
     if len(password) < MIN_PASSWORD_LENGTH:
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "register.html",
-            {"request": request, "error": f"Adgangskode skal være mindst {MIN_PASSWORD_LENGTH} tegn"}
+            {"error": f"Adgangskode skal være mindst {MIN_PASSWORD_LENGTH} tegn"}
         )
 
     if password != password_confirm:
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "register.html",
-            {"request": request, "error": "Adgangskoderne matcher ikke"}
+            {"error": "Adgangskoderne matcher ikke"}
         )
 
     # Create user
     new_user_id = db.create_user(username, password)
     if new_user_id is None:
-        return templates.TemplateResponse(
+        return templates.TemplateResponse(request,
             "register.html",
-            {"request": request, "error": "Brugernavnet er allerede taget"}
+            {"error": "Brugernavnet er allerede taget"}
         )
 
     # Auto-login after registration

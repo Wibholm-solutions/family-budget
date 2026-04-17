@@ -28,10 +28,9 @@ async def accounts_page(request: Request, ctx: DataContext = Depends(get_data)):
     accounts = ctx.accounts()
     account_usage = ctx.account_usage()
 
-    return templates.TemplateResponse(
+    return templates.TemplateResponse(request,
         "accounts.html",
         {
-            "request": request,
             "accounts": accounts,
             "account_usage": account_usage,
             "demo_mode": ctx.demo,
