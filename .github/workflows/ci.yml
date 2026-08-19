@@ -1,0 +1,118 @@
+name: CI
+
+# Runs on the trusted development-PC CI lane only. Every job requests the exact
+# lane labels, and the pull-request guard keeps fork code off the runner.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: dev-pc-ci-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, linux, x64, dev-pc, ci]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Run unit, integration and Playwright E2E suites
+        shell: bash
+        env:
+          # The lane's only intentional non-secret cache. Browser downloads and
+          # wheels live here so a job does not re-download them every run.
+          LANE_CACHE: /home/homelab-ci/.cache/ci
+        run: |
+          set -euo pipefail
+          mkdir -p "$LANE_CACHE/pip" "$LANE_CACHE/ms-playwright"
+          # The lane host has no passwordless sudo and no browser system
+          # libraries, so Playwright runs inside a container instead.
+          docker run --rm \
+            --volume "$PWD:/workspace" \
+            --workdir /workspace \
+            --volume "$LANE_CACHE/pip:/root/.cache/pip" \
+            --volume "$LANE_CACHE/ms-playwright:/ms-playwright" \
+            --env PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            --env PYTHONDONTWRITEBYTECODE=1 \
+            python:3.12-slim bash -c '
+              set -euo pipefail
+              pip install --quiet --root-user-action=ignore --requirement requirements.txt
+              playwright install --with-deps chromium >/dev/null
+              python -m pytest tests/
+              python -m pytest e2e/
+            '
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: test
+    runs-on: [self-hosted, linux, x64, dev-pc, ci]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Enforce zero-spend gate
+        shell: bash
+        run: /usr/local/lib/homelab-ci/assert-zero-spend-gate.sh
+
+      - name: Build and publish a digest-identified image with open attestations
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          repository="${GITHUB_REPOSITORY,,}"
+          # Provenance tag only. The digest is the identity, and no `latest` or
+          # semantic alias is published, so no alias can authorise a deployment.
+          image="ghcr.io/${repository}:sha-${GITHUB_SHA}"
+          export DOCKER_CONFIG="$(mktemp -d /dev/shm/family-budget-docker.XXXXXX)"
+          chmod 0700 "$DOCKER_CONFIG"
+          cleanup_registry_auth() {
+            docker logout ghcr.io >/dev/null 2>&1 || true
+            rm -rf -- "$DOCKER_CONFIG"
+          }
+          trap cleanup_registry_auth EXIT
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker buildx build \
+            --file Dockerfile \
+            --tag "$image" \
+            --sbom=true \
+            --provenance=mode=max \
+            --push \
+            .
+          digest="$(docker buildx imagetools inspect "$image" --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          sbom_json="$(docker buildx imagetools inspect "$image" --format '{{json .SBOM.SPDX}}')"
+          if ! printf '%s\n' "$sbom_json" | jq -e '.SPDXID | type == "string" and length > 0' >/dev/null; then
+            echo 'published image is missing an SPDX SBOM' >&2
+            exit 1
+          fi
+          echo 'verified-sbom-spdx'
+          provenance_json="$(docker buildx imagetools inspect "$image" --format '{{json .Provenance.SLSA}}')"
+          if ! printf '%s\n' "$provenance_json" | jq -e \
+            '(.buildType // .buildDefinition.buildType // .predicate.buildType) | type == "string" and length > 0' >/dev/null; then
+            echo 'published image is missing SLSA provenance' >&2
+            exit 1
+          fi
+          echo 'verified-slsa-provenance'
+          if ! printf '%s\n' "$provenance_json" | jq -e \
+            --arg source_commit "$GITHUB_SHA" \
+            --arg source_repository "$repository" \
+            'tostring | ascii_downcase | contains($source_commit) and contains($source_repository)' >/dev/null; then
+            echo 'SLSA provenance is not bound to the source repository and commit' >&2
+            exit 1
+          fi
+          echo 'verified-slsa-provenance-source'
+          echo "published ghcr.io/${repository}@${digest}"
+          {
+            echo "### Published image"
+            echo
+            echo "- digest: \`ghcr.io/${repository}@${digest}\`"
+            echo "- provenance tag: \`sha-${GITHUB_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,10 +1,13 @@
-name: CI/CD
+name: CI/CD (legacy server runner - inert)
+
+# Superseded by ci.yml on the trusted development-PC CI lane
+# (saabendtsen/homelab-workspace#125). The definition is kept intact for the
+# follow-on retirement ticket, but it no longer runs on push or pull request,
+# so it never executes on the CI lane. Retirement of the server-side build and
+# deploy step belongs to that ticket, not to this workflow.
 
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -34,7 +37,7 @@ jobs:
           DISPLAY: ":99"
 
   deploy:
-    if: github.event_name == 'push'
+    if: github.event_name == 'never'
     needs: test
     runs-on: self-hosted
     steps:
