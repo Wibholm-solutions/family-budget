@@ -18,6 +18,7 @@ from .helpers import (  # noqa: F401 -- backward compat for tests
     hash_token,
     is_demo_advanced,
     is_demo_mode,
+    is_development,
     parse_danish_amount,
     save_sessions,
     templates,
@@ -31,9 +32,16 @@ db.init_db()
 logger = logging.getLogger(__name__)
 
 # Create app
+# Interactive API docs are development-only: a public financial app must not
+# publish /docs, /redoc or /openapi.json (ENVIRONMENT=development enables them).
+_DOCS_ENABLED = is_development()
+
 app = FastAPI(
     title="Family Budget",
     description="A simple family budget tracker",
+    docs_url="/docs" if _DOCS_ENABLED else None,
+    redoc_url="/redoc" if _DOCS_ENABLED else None,
+    openapi_url="/openapi.json" if _DOCS_ENABLED else None,
 )
 
 # Add security and rate limiting middleware

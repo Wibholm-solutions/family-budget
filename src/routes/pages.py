@@ -9,6 +9,7 @@ import httpx
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from ..client_ip import get_client_ip, load_trusted_proxies
 from ..dependencies import require_auth
 from ..helpers import (
     DONATION_LINKS,
@@ -75,6 +76,9 @@ feedback_attempts: dict[str, list[float]] = defaultdict(list)
 FEEDBACK_RATE_LIMIT = 5  # max submissions
 FEEDBACK_RATE_WINDOW = 3600  # per hour
 
+# Proxies whose forwarded client address may be trusted (see src/client_ip.py)
+TRUSTED_PROXIES = load_trusted_proxies()
+
 
 def check_feedback_rate_limit(client_ip: str) -> bool:
     """Check if client has exceeded feedback rate limit."""
@@ -102,7 +106,7 @@ async def feedback_page(request: Request, _: None = Depends(require_auth)):
 
 
 @router.post("/feedback")
-async def submit_feedback(  # noqa: PLR0911, PLR0912
+async def submit_feedback(  # noqa: PLR0911
     request: Request,
     feedback_type: str = Form(...),
     description: str = Form(...),
@@ -112,7 +116,7 @@ async def submit_feedback(  # noqa: PLR0911, PLR0912
 ):
     """Submit feedback via feedback-api."""
     demo = is_demo_mode(request)
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = get_client_ip(request, TRUSTED_PROXIES)
 
     # Honeypot check (bots fill hidden fields)
     if website:
