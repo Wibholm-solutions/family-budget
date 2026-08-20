@@ -175,7 +175,7 @@ uvicorn src.api:app --host 0.0.0.0 --port 8086
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `ENVIRONMENT` | `production` | `development`/`dev`/`local` enables the interactive API docs (`/docs`, `/redoc`, `/openapi.json`). Anything else keeps them disabled. |
-| `TRUSTED_PROXY_IPS` | `127.0.0.1,::1` | Comma separated IPs/CIDRs whose `X-Forwarded-For` may be trusted. Rate limiting keys on the forwarded client address only for requests arriving from these proxies; headers from anywhere else are ignored. Set it to the reverse proxy's address (behind Docker, the bridge gateway, e.g. `172.17.0.1`). |
+| `TRUSTED_PROXY_IPS` | `127.0.0.1,::1` | Comma separated IPs/CIDRs whose `X-Forwarded-For` may be trusted. Rate limiting keys on the forwarded client address only for requests arriving from these proxies; headers from anywhere else are ignored. Set it to the address the proxy's requests actually arrive from. Behind Docker this is a gateway address, but not necessarily the default bridge: if the proxy is host-networked and reaches a published port, requests re-originate from the Compose project network's gateway. Confirm it rather than assuming - `docker network inspect <project>_default` - and cross-check against the peer address in the container's request log. A wrong value fails closed: the header is ignored and every client shares one rate-limit bucket. |
 
 ## Project Structure
 
