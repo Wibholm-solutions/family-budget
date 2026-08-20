@@ -7,22 +7,31 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from .client_ip import get_client_ip, load_trusted_proxies
 from .constants import LOGIN_RATE_LIMIT_MAX, LOGIN_RATE_LIMIT_WINDOW
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Simple rate limiting for login attempts."""
 
-    def __init__(self, app, max_attempts: int = LOGIN_RATE_LIMIT_MAX, window_seconds: int = LOGIN_RATE_LIMIT_WINDOW):
+    def __init__(
+        self,
+        app,
+        max_attempts: int = LOGIN_RATE_LIMIT_MAX,
+        window_seconds: int = LOGIN_RATE_LIMIT_WINDOW,
+        trusted_proxies=None,
+    ):
         super().__init__(app)
         self.max_attempts = max_attempts
         self.window_seconds = window_seconds
+        # Only these proxies may present a forwarded client address.
+        self.trusted_proxies = load_trusted_proxies() if trusted_proxies is None else trusted_proxies
         self.attempts: dict[str, list[float]] = defaultdict(list)
 
     async def dispatch(self, request: Request, call_next):
         # Only rate limit login POST requests
         if request.url.path == "/budget/login" and request.method == "POST":
-            client_ip = request.client.host if request.client else "unknown"
+            client_ip = get_client_ip(request, self.trusted_proxies)
             now = time.time()
 
             # Clean old attempts for this IP

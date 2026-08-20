@@ -13,6 +13,16 @@ from fastapi.templating import Jinja2Templates
 # Load environment
 load_dotenv(Path(__file__).parent.parent / ".env")
 
+# Deployment environment. Anything other than an explicit development value is
+# treated as production, so new deployments fail closed (no interactive docs).
+DEV_ENVIRONMENTS = {"development", "dev", "local"}
+
+
+def is_development() -> bool:
+    """True when the app runs in a development environment."""
+    return os.getenv("ENVIRONMENT", "production").strip().lower() in DEV_ENVIRONMENTS
+
+
 # Stripe donation payment links (override with env vars for production)
 DONATION_LINKS = {
     10: os.getenv("STRIPE_DONATE_10", "https://buy.stripe.com/test_28E14hdiw6eb5Z70Jl9IQ00"),

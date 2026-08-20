@@ -13,6 +13,11 @@ services:
     environment:
       - TZ=Europe/Copenhagen
       - PYTHONUNBUFFERED=1
+      # Production disables /docs, /redoc and /openapi.json
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      # Reverse proxies whose X-Forwarded-For may be trusted (Caddy on the
+      # Docker host reaches the container via the bridge gateway)
+      - TRUSTED_PROXY_IPS=${TRUSTED_PROXY_IPS:-127.0.0.1,::1,172.17.0.1}
       - APP_VERSION=${APP_VERSION}
       # Feedback API (replaces direct GitHub API calls)
       - FEEDBACK_API_URL=${FEEDBACK_API_URL:-http://172.17.0.1:3102}
