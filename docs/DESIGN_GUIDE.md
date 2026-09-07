@@ -2,7 +2,7 @@
 
 Dette er et genbrugeligt design system til simple web apps, baseret på family-budget's visuelle identitet.
 
-**Reference implementation:** family-budget appen (`/home/saabendtsen/projects/family-budget`)
+**Reference implementation:** family-budget appen (`<project-root>`)
 
 ## Hvornår bruges denne guide?
 
@@ -449,9 +449,9 @@ focus:ring-2 focus:ring-primary focus:border-transparent outline-none
 ## Reference Files
 
 For konkrete eksempler, se:
-- `/home/saabendtsen/projects/family-budget/templates/base.html` - Base template setup
-- `/home/saabendtsen/projects/family-budget/templates/dashboard.html` - Card layouts, navigation
-- `/home/saabendtsen/projects/family-budget/templates/login.html` - Forms, buttons
+- `<project-root>/templates/base.html` - Base template setup
+- `<project-root>/templates/dashboard.html` - Card layouts, navigation
+- `<project-root>/templates/login.html` - Forms, buttons
 
 ---
 

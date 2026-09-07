@@ -203,3 +203,10 @@ pytest e2e/
 ## License
 
 This project is developed for private use, but the code is freely available for reference.
+
+## Sikkerhed / Security
+
+Rapporter sårbarheder privat — opret ikke et offentligt issue. Se
+[SECURITY.md](SECURITY.md) for fremgangsmåden.
+
+*Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).*

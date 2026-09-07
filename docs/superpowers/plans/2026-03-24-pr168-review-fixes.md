@@ -44,7 +44,7 @@ def test_skip_name_omits_name_validation(self):
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /home/saabendtsen/projects/family-budget && venv/bin/python -m pytest tests/test_validators.py::TestValidateExpense::test_skip_name_omits_name_validation -v`
+Run: `cd <project-root> && venv/bin/python -m pytest tests/test_validators.py::TestValidateExpense::test_skip_name_omits_name_validation -v`
 Expected: FAIL with `TypeError: validate_expense() got an unexpected keyword argument 'skip_name'`
 
 - [ ] **Step 3: Add `skip_name` parameter to `validate_expense()`**
@@ -89,17 +89,17 @@ def validate_expense(
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd /home/saabendtsen/projects/family-budget && venv/bin/python -m pytest tests/test_validators.py::TestValidateExpense::test_skip_name_omits_name_validation -v`
+Run: `cd <project-root> && venv/bin/python -m pytest tests/test_validators.py::TestValidateExpense::test_skip_name_omits_name_validation -v`
 Expected: PASS
 
 - [ ] **Step 5: Run full test_validators.py to check no regressions**
 
-Run: `cd /home/saabendtsen/projects/family-budget && venv/bin/python -m pytest tests/test_validators.py -v`
+Run: `cd <project-root> && venv/bin/python -m pytest tests/test_validators.py -v`
 Expected: All tests pass (existing tests don't use `skip_name`, so default `False` preserves behavior)
 
 - [ ] **Step 6: Lint check**
 
-Run: `cd /home/saabendtsen/projects/family-budget && venv/bin/ruff check src/validators.py tests/test_validators.py`
+Run: `cd <project-root> && venv/bin/ruff check src/validators.py tests/test_validators.py`
 Expected: No errors
 
 - [ ] **Step 7: Commit**
@@ -136,12 +136,12 @@ def validate_expense_input(
 
 - [ ] **Step 2: Run existing expense validation tests**
 
-Run: `cd /home/saabendtsen/projects/family-budget && venv/bin/python -m pytest tests/test_expense_validation.py -v`
+Run: `cd <project-root> && venv/bin/python -m pytest tests/test_expense_validation.py -v`
 Expected: All 16 existing tests pass (shim behavior unchanged)
 
 - [ ] **Step 3: Lint check**
 
-Run: `cd /home/saabendtsen/projects/family-budget && venv/bin/ruff check src/routes/expenses.py`
+Run: `cd <project-root> && venv/bin/ruff check src/routes/expenses.py`
 Expected: No errors
 
 - [ ] **Step 4: Commit**
@@ -196,7 +196,7 @@ In `src/routes/accounts.py`, in `edit_account`:
 
 - [ ] **Step 3: Run full test suite to verify no regressions**
 
-Run: `cd /home/saabendtsen/projects/family-budget && venv/bin/python -m pytest tests/ e2e/ -q 2>&1 | tail -40`
+Run: `cd <project-root> && venv/bin/python -m pytest tests/ e2e/ -q 2>&1 | tail -40`
 Expected: All tests pass
 
 - [ ] **Step 4: Commit**
@@ -254,12 +254,12 @@ In `src/routes/categories.py`, in `edit_category`:
 
 - [ ] **Step 3: Run full test suite**
 
-Run: `cd /home/saabendtsen/projects/family-budget && venv/bin/python -m pytest tests/ e2e/ -q 2>&1 | tail -40`
+Run: `cd <project-root> && venv/bin/python -m pytest tests/ e2e/ -q 2>&1 | tail -40`
 Expected: All tests pass
 
 - [ ] **Step 4: Lint check on all changed files**
 
-Run: `cd /home/saabendtsen/projects/family-budget && venv/bin/ruff check src/validators.py src/routes/expenses.py src/routes/accounts.py src/routes/categories.py`
+Run: `cd <project-root> && venv/bin/ruff check src/validators.py src/routes/expenses.py src/routes/accounts.py src/routes/categories.py`
 Expected: No errors
 
 - [ ] **Step 5: Commit**
