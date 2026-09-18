@@ -55,6 +55,11 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      # The digest is the image's identity, and the promotion request names it.
+      # Nothing downstream may refer to a tag: a tag can be moved, and a movable
+      # reference must never be able to authorise a deployment.
+      digest: ${{ steps.publish.outputs.digest }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
@@ -63,6 +68,7 @@ jobs:
         run: /usr/local/lib/homelab-ci/assert-zero-spend-gate.sh
 
       - name: Build and publish a digest-identified image with open attestations
+        id: publish
         shell: bash
         env:
           GHCR_TOKEN: ${{ github.token }}
@@ -110,9 +116,90 @@ jobs:
           fi
           echo 'verified-slsa-provenance-source'
           echo "published ghcr.io/${repository}@${digest}"
+          # The promotion request is only as trustworthy as this string, so it is
+          # checked here rather than at the receiver, which would reject it anyway.
+          if ! printf '%s' "$digest" | grep -Eq '^sha256:[0-9a-f]{64}$'; then
+            echo "published digest is not an immutable sha256 identity: $digest" >&2
+            exit 1
+          fi
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
           {
             echo "### Published image"
             echo
             echo "- digest: \`ghcr.io/${repository}@${digest}\`"
             echo "- provenance tag: \`sha-${GITHUB_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # The other end of the lane. Until this job existed, a merge to master published a
+  # digest that nothing consumed: shipping meant hand-editing desired-state.json in
+  # saabendtsen/home-server. This job asks for the promotion; it decides nothing.
+  #
+  # It never touches the server and holds no deployment credential of its own. It
+  # sends one repository_dispatch to the infrastructure repository, whose receiver
+  # re-validates every field from scratch against the checked-in lane contract and
+  # then deploys, verifies and records, rolling back to the known-good digest if the
+  # verification contract fails. A request this job could forge is refused there.
+  promote:
+    needs: publish
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: [self-hosted, linux, x64, dev-pc, ci]
+    permissions:
+      contents: read
+    env:
+      APPLICATION: family-budget
+    steps:
+      - name: Mint a short-lived cross-repository token
+        id: token
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547
+        with:
+          app-id: ${{ vars.DEPLOY_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+          owner: saabendtsen
+          repositories: home-server
+
+      - name: Send the promotion request
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          DIGEST: ${{ needs.publish.outputs.digest }}
+        run: |
+          set -euo pipefail
+          test -n "$DIGEST"
+          # The request is nested under a single `request` property because a
+          # repository_dispatch client_payload may carry at most 10 top-level
+          # properties, and a promotion request has 11 required fields. Sent flat,
+          # the API rejects it before the receiver ever sees it.
+          jq -n \
+            --arg request_id "promotion-$(date -u +%Y-%m-%d)-$(printf '%04d' "$GITHUB_RUN_NUMBER")" \
+            --arg application "${APPLICATION}" \
+            --arg source_repository "${GITHUB_REPOSITORY}" \
+            --arg image "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${APPLICATION}" \
+            --arg digest "${DIGEST}" \
+            --arg source_commit "${GITHUB_SHA}" \
+            --arg run "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --arg requested_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+               event_type: "promotion-request",
+               client_payload: {
+                 request: {
+                   schema_version: 1,
+                   request_id: $request_id,
+                   application: $application,
+                   host: "homelab",
+                   source_repository: $source_repository,
+                   image: $image,
+                   digest: $digest,
+                   source_commit: $source_commit,
+                   source_workflow_run: $run,
+                   runtime_contract_version: "1.0.0",
+                   requested_at: $requested_at
+                 }
+               }
+             }' \
+            | gh api repos/saabendtsen/home-server/dispatches --input -
+          {
+            echo "### Promotion requested"
+            echo
+            echo "- digest: \`${DIGEST}\`"
+            echo "- receiver: https://github.com/saabendtsen/home-server/actions/workflows/promotion.yml"
           } >> "$GITHUB_STEP_SUMMARY"
