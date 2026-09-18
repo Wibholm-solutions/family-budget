@@ -29,7 +29,7 @@ A web application for household budget management, built with FastAPI and SQLite
 
 1. **Clone the repository**:
     ```bash
-    git clone https://github.com/saabendtsen/family-budget.git
+    git clone https://github.com/Wibholm-solutions/family-budget.git
     cd family-budget
     ```
 
@@ -44,116 +44,25 @@ A web application for household budget management, built with FastAPI and SQLite
     ```
     The application will be available at `http://localhost:8086/budget/`
 
-## Self-Hosting Guide
+## Running it locally
 
-### Quick Start with Docker
+### With Docker
 
 ```bash
-git clone https://github.com/saabendtsen/family-budget.git
+git clone https://github.com/Wibholm-solutions/family-budget.git
 cd family-budget
 docker compose up -d --build
 ```
 
 The application runs on `http://localhost:8086/budget/` with the database persisted in `./data`.
 
-### Production Setup with Auto-Deploy
+`docker-compose.yml` in this repository is **for local development only**. It builds from the
+working tree (`build: .`), publishes port 8086 on the machine you run it on, and keeps its
+database in `./data` next to the checkout. It is deliberately *not* the file the deployed
+instance runs; see [Deployment](#deployment) below for that one. Nothing in this repository
+deploys anything by itself.
 
-For a production server with automatic deployments when you push to GitHub:
-
-#### 1. Clone and Initial Setup
-
-```bash
-cd ~/projects
-git clone https://github.com/YOUR_USERNAME/family-budget.git
-cd family-budget
-docker compose up -d --build
-```
-
-#### 2. Create Deploy Script
-
-Create `scripts/deploy.sh`:
-```bash
-#!/bin/bash
-set -e
-cd ~/projects/family-budget
-
-BRANCH="main"
-if ! git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
-    BRANCH="master"
-fi
-
-git fetch origin "$BRANCH" --quiet
-LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse "origin/$BRANCH")
-
-if [ "$LOCAL" = "$REMOTE" ]; then
-    exit 0
-fi
-
-echo "[$(date)] New commits detected, deploying..."
-git reset --hard "origin/$BRANCH"
-export APP_VERSION=$(cat VERSION)
-docker compose build --quiet
-docker compose down
-docker compose up -d
-
-sleep 3
-if curl -sf http://localhost:8086/budget/login > /dev/null; then
-    echo "[$(date)] Deploy successful: $(git log -1 --oneline)"
-else
-    echo "[$(date)] Health check failed!"
-    exit 1
-fi
-```
-
-Make it executable: `chmod +x scripts/deploy.sh`
-
-#### 3. Create Systemd Timer (Auto-Deploy)
-
-Create `~/.config/systemd/user/family-budget-deploy.service`:
-```ini
-[Unit]
-Description=Family Budget Auto-Deploy
-After=network-online.target
-
-[Service]
-Type=oneshot
-WorkingDirectory=/home/YOUR_USER/projects/family-budget
-ExecStart=/home/YOUR_USER/projects/family-budget/scripts/deploy.sh
-StandardOutput=journal
-StandardError=journal
-```
-
-Create `~/.config/systemd/user/family-budget-deploy.timer`:
-```ini
-[Unit]
-Description=Family Budget Auto-Deploy Timer
-
-[Timer]
-OnBootSec=1min
-OnUnitActiveSec=1min
-
-[Install]
-WantedBy=timers.target
-```
-
-Enable and start:
-```bash
-systemctl --user daemon-reload
-systemctl --user enable --now family-budget-deploy.timer
-loginctl enable-linger $USER  # Keep timer running without login
-```
-
-#### 4. Reverse Proxy (Optional)
-
-For HTTPS, use a reverse proxy like Caddy or nginx. Example Caddy config:
-```
-budget.yourdomain.com {
-    reverse_proxy localhost:8086
-}
-```
-
-### Manual Setup (Without Docker)
+### Without Docker
 
 ```bash
 sudo apt update
@@ -164,11 +73,64 @@ pip install -r requirements.txt
 python -m src.api
 ```
 
-For production, use uvicorn with a process manager:
-```bash
-pip install uvicorn
-uvicorn src.api:app --host 0.0.0.0 --port 8086
-```
+This is a development convenience. The deployed instance runs the published container image,
+never a checkout — see [Deployment](#deployment).
+
+## Deployment
+
+The deployed instance is **not** built, pulled or updated on the server. It runs an immutable
+image identified by digest, and the digest is changed by a reviewed commit in a separate
+infrastructure repository.
+
+### The lane, end to end
+
+1. **Test and publish.** `.github/workflows/ci.yml` runs the unit, integration and Playwright
+   suites on the trusted development-PC CI lane. On a push to `master` it builds the image and
+   pushes it to `ghcr.io/wibholm-solutions/family-budget` with an SBOM and SLSA provenance bound
+   to the source repository and commit. The **digest** (`sha256:…`) is the identity; the
+   `sha-<commit>` tag is provenance only. No `latest` or semantic alias is published, precisely
+   so that no tag can authorise a deployment.
+2. **Pin.** `saabendtsen/home-server` holds the desired runtime state at
+   `applications/family-budget/`. `desired-state.json` pins the exact digest that should be
+   running, together with the source commit and the workflow run that produced it.
+   `compose.yaml` there is the real server wiring: no `build:`, the image comes from
+   `FAMILY_BUDGET_IMAGE` which the deployment lane resolves from `desired-state.json`.
+3. **Converge.** The development-PC deployment lane applies that state to the server over SSH.
+   The application runs from `/srv/homelab-deploy/family-budget/`, with persistent data on a
+   bind mount at `/srv/homelab-deploy/family-budget/data` and runtime configuration from
+   `/srv/homelab-deploy/family-budget/family-budget.env` — both outside the image, so replacing
+   the image never touches them.
+4. **Verify or roll back.** `applications/family-budget/verification.json` states what "up"
+   means: the container reaching `healthy`, `GET /budget/health` answering `200`, and no fatal
+   log patterns. A promotion that fails verification restores the previous known-good digest;
+   a verified one is recorded in `history.jsonl` and becomes the new `known-good.json`.
+
+A rollback is therefore a different digest and nothing else.
+
+### Route and TLS
+
+The live route is `https://wibholmsolutions.com/budget`. There is no dedicated hostname for
+this application. TLS terminates at the **shared Caddy instance** on the server, which matches
+a `handle /budget*` path block on `wibholmsolutions.com` and reverse-proxies it to the
+container's port 8086. The Caddy configuration lives with the server's infrastructure, not in
+this repository, and the application must keep serving under the `/budget` path prefix.
+
+Because requests arrive through that proxy, `TRUSTED_PROXY_IPS` must name the address the
+proxy's requests actually originate from — see the table below.
+
+### The database holds live personal data
+
+`/srv/homelab-deploy/family-budget/data/budget.db` is the deployed SQLite database. It contains
+real accounts and real household budgets belonging to members of the public.
+
+- **No command in this README, and no command in this repository, may be run against it.** In
+  particular nothing that resets, recreates, migrates or seeds a database, and nothing that
+  removes or replaces the `data/` bind mount.
+- The `./data` directory used by `docker compose up` is a *local* directory next to your
+  checkout. It is not the deployed one, and the two must never be swapped.
+- A release that changes the schema in a way the previous image cannot read is not safe for
+  unattended promotion: it must be declared in `verification.json` under `rollback_safety`, so
+  it fails closed for human review instead of deploying automatically.
 
 ### Environment variables (deployment)
 
