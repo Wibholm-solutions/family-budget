@@ -7,9 +7,10 @@ This file defines the operational rules for Claude Code within the Family Budget
 - **Standards:** Refer to `docs/PATTERNS.md` for coding standards and `docs/DESIGN_GUIDE.md` for UI patterns.
 
 ## 2. CI/CD & Deployment (Operational Facts)
-- **CI Pipeline:** Tests run on all PRs/pushes to master (`.github/workflows/ci.yml`).
-- **Manual Deploy:** `cd ~/projects/family-budget && docker compose up -d --build`.
-- **Auto-Deploy:** Currently **disabled** to avoid overwriting feature branches on server.
+- **CI Pipeline:** Tests run on all PRs/pushes to master (`.github/workflows/ci.yml`), on the trusted development-PC CI lane. A push to `master` also publishes a digest-identified image to `ghcr.io/wibholm-solutions/family-budget` with SBOM and SLSA provenance.
+- **Deployment:** Nothing in this repository deploys. The deployed instance runs a digest-pinned image; the digest is pinned in `saabendtsen/home-server` at `applications/family-budget/desired-state.json` and converged by the deployment lane onto `/srv/homelab-deploy/family-budget/`. See README.md, "Deployment".
+- **`docker-compose.yml` is local development only.** It builds from the working tree. Never run it against the server, and never against the deployed `data/` directory.
+- **Live data:** `/srv/homelab-deploy/family-budget/data/budget.db` holds real users' budgets. No command may reset, migrate or recreate it unattended.
 - **Dockerfile:** When adding a new top-level directory (e.g. `static/`, `assets/`), always add a corresponding `COPY <dir>/ ./<dir>/` line to the Dockerfile.
 
 ## 3. Development Workflow

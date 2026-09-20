@@ -1,3 +1,19 @@
+# Local development only.
+#
+# This file builds the application from the working tree and keeps its database
+# in ./data next to the checkout. It is not, and must not be used as, the
+# deployed configuration.
+#
+# The deployed instance runs an immutable, digest-pinned image published by
+# .github/workflows/ci.yml. Its compose file and the digest it runs live in the
+# infrastructure repository saabendtsen/home-server under
+# applications/family-budget/ (compose.yaml + desired-state.json), and the
+# deployment lane converges it onto /srv/homelab-deploy/family-budget/ on the
+# server. Nothing here can reproduce that, by design: an image built from a
+# working tree has no digest identity, no SBOM and no provenance.
+#
+# Never point this file at the deployed data directory. See README.md,
+# "The database holds live personal data".
 services:
   family-budget:
     build: .
