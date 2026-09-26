@@ -10,13 +10,13 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: dev-pc-ci-${{ github.repository }}-${{ github.ref }}
+  group: server-ci-${{ github.repository }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   test:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, linux, x64, dev-pc, ci]
+    runs-on: [self-hosted, linux, x64, server, ci]
     permissions:
       contents: read
     steps:
@@ -51,7 +51,7 @@ jobs:
   publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs: test
-    runs-on: [self-hosted, linux, x64, dev-pc, ci]
+    runs-on: [self-hosted, linux, x64, server, ci]
     permissions:
       contents: read
       packages: write
@@ -142,7 +142,7 @@ jobs:
   promote:
     needs: publish
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    runs-on: [self-hosted, linux, x64, dev-pc, ci]
+    runs-on: [self-hosted, linux, x64, server, ci]
     permissions:
       contents: read
     env:
